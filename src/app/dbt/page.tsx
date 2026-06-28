@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import DBTManager from "./DBTManager";
 import Topbar from "@/components/Topbar";
@@ -10,39 +11,31 @@ export default async function DBTPage() {
   const clerkUser = await currentUser();
   const email = clerkUser?.emailAddresses[0]?.emailAddress || "officer@nmct.org";
 
-  const officerDbUser = await db.user.findFirst({
-    where: { email },
-  });
+  const { data: officerDbUser } = await supabase
+    .from("User")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
   // Fetch all DBT Records in the system, joined with student and assigned officer
-  const dbtRecords = await db.dBTRecord.findMany({
-    include: {
-      student: {
-        include: {
-          assignedOfficer: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const { data: dbtRecordsData } = await supabase
+    .from("DBTRecord")
+    .select("*, student:Student(*, assignedOfficer:User(*))")
+    .order("createdAt", { ascending: false });
+
+  const dbtRecords = dbtRecordsData || [];
 
   // Fetch all students to feed the student picker dropdown in the modal
-  const allStudents = await db.student.findMany({
-    select: {
-      id: true,
-      name: true,
-      currentClass: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
-  });
+  const { data: allStudentsData } = await supabase
+    .from("Student")
+    .select("id, name, currentClass")
+    .order("name", { ascending: true });
+
+  const allStudents = allStudentsData || [];
 
   // Calculate DBT metrics
   const totalDisbursed = dbtRecords
@@ -56,17 +49,17 @@ export default async function DBTPage() {
   const eligibleCount = dbtRecords.filter((r) => r.status === "ELIGIBLE").length;
 
   // Format records for the Client Component
-  const formattedRecords = dbtRecords.map((r) => ({
+  const formattedRecords = dbtRecords.map((r: any) => ({
     id: r.id,
     studentId: r.studentId,
-    studentName: r.student.name,
-    studentClass: r.student.currentClass,
-    officerName: r.student.assignedOfficer.name,
+    studentName: r.student?.name || "Unknown",
+    studentClass: r.student?.currentClass || "Unknown",
+    officerName: r.student?.assignedOfficer?.name || "Unknown",
     scholarshipName: r.scholarshipName,
     amount: r.amount,
     status: r.status,
     remarks: r.remarks,
-    createdAt: r.createdAt.toISOString(),
+    createdAt: typeof r.createdAt === "string" ? r.createdAt : new Date(r.createdAt).toISOString(),
   }));
 
   return (

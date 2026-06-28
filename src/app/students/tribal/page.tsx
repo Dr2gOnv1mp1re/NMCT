@@ -1,5 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import StudentsRegistry from "@/components/StudentsRegistry";
 
 export const dynamic = "force-dynamic";
@@ -9,31 +9,39 @@ export default async function TribalStudentsPage() {
   const email = clerkUser?.emailAddresses[0]?.emailAddress || "officer@nmct.org";
 
   // 1. Find user in the local database by email
-  let officerDbUser = await db.user.findFirst({
-    where: { email: email },
-  });
+  let { data: officerDbUser } = await supabase
+    .from("User")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
 
   // 2. If the user was invited and is logging in for the first time,
   // we update their temporary invitation clerkUserId with their real Clerk ID
   if (officerDbUser && officerDbUser.clerkUserId.startsWith("inv_") && clerkUser) {
-    officerDbUser = await db.user.update({
-      where: { id: officerDbUser.id },
-      data: { clerkUserId: clerkUser.id },
-    });
+    const { data: updatedUser } = await supabase
+      .from("User")
+      .update({ clerkUserId: clerkUser.id })
+      .eq("id", officerDbUser.id)
+      .select()
+      .single();
+    if (updatedUser) officerDbUser = updatedUser;
   }
 
   // 3. Fallback: if the user does not exist in DB, create them as FIELD_OFFICER
   if (!officerDbUser && clerkUser) {
-    officerDbUser = await db.user.create({
-      data: {
+    const { data: createdUser } = await supabase
+      .from("User")
+      .insert({
         clerkUserId: clerkUser.id,
         name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Field Officer",
         email: email,
         role: "FIELD_OFFICER",
         district: "Nilgiris",
         isActive: true,
-      },
-    });
+      })
+      .select()
+      .single();
+    if (createdUser) officerDbUser = createdUser;
   }
 
   const officerId = officerDbUser?.id || "demo_officer_id";
@@ -41,12 +49,13 @@ export default async function TribalStudentsPage() {
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
   // 4. Fetch assigned tribal students
-  const students = await db.student.findMany({
-    where: {
-      assignedOfficerId: officerId,
-      isTribal: true,
-    },
-  });
+  const { data: studentsData } = await supabase
+    .from("Student")
+    .select("*")
+    .eq("assignedOfficerId", officerId)
+    .eq("isTribal", true);
+
+  const students = studentsData || [];
 
   // Sort alphabetically case-insensitively
   students.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));

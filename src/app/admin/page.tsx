@@ -1,5 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import InviteOfficerForm from "@/components/InviteOfficerForm";
 import Topbar from "@/components/Topbar";
@@ -11,36 +11,52 @@ export default async function AdminPage() {
   const email = clerkUser?.emailAddresses[0]?.emailAddress || "";
 
   // Find or create the user in our local DB
-  let adminDbUser = await db.user.findFirst({ where: { email } });
+  let adminDbUser = null;
+  if (email) {
+    const { data } = await supabase
+      .from("User")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+    adminDbUser = data;
+  }
 
-  if (!adminDbUser && clerkUser) {
-    adminDbUser = await db.user.create({
-      data: {
+  if (!adminDbUser && clerkUser && email) {
+    const { data } = await supabase
+      .from("User")
+      .insert({
         clerkUserId: clerkUser.id,
         name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Admin User",
         email,
         role: "ADMIN",
         district: "Coimbatore",
         isActive: true,
-      },
-    });
+      })
+      .select()
+      .single();
+    adminDbUser = data;
   }
 
   const officerName = adminDbUser?.name || "Admin";
   const officerDistrict = adminDbUser?.district || "Coimbatore";
 
   // Fetch field officers
-  const officers = await db.user.findMany({
-    where: { role: "FIELD_OFFICER" },
-    orderBy: { createdAt: "desc" },
-  });
+  const { data: officersData } = await supabase
+    .from("User")
+    .select("*")
+    .eq("role", "FIELD_OFFICER")
+    .order("createdAt", { ascending: false });
+
+  const officers = officersData || [];
 
   // Fetch recent activity logs
-  const logs = await db.activityLog.findMany({
-    take: 20,
-    orderBy: { timestamp: "desc" },
-    include: { user: true },
-  });
+  const { data: logsData } = await supabase
+    .from("ActivityLog")
+    .select("*, user:User(*)")
+    .order("timestamp", { ascending: false })
+    .limit(20);
+
+  const logs = logsData || [];
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex text-[#0F172A] font-sans antialiased">

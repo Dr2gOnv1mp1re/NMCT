@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import AchievementsSection from "./AchievementsSection";
 import Link from "next/link";
@@ -21,33 +22,41 @@ export default async function StudentProfilePage({
   const clerkUser = await currentUser();
   const email = clerkUser?.emailAddresses[0]?.emailAddress || "officer@nmct.org";
 
-  const officerDbUser = await db.user.findFirst({
-    where: { email },
-  });
+  const { data: officerDbUser } = await supabase
+    .from("User")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
 
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
   // Fetch student details with relations
-  const student = await db.student.findUnique({
-    where: { id },
-    include: {
-      attendanceRecords: {
-        orderBy: [{ year: "desc" }, { month: "desc" }],
-      },
-      achievements: {
-        orderBy: { date: "desc" },
-      },
-      tuitionAttendance: {
-        orderBy: { date: "desc" },
-        take: 30, // Show last 30 daily logs
-      },
-    },
-  });
+  const { data: studentData } = await supabase
+    .from("Student")
+    .select("*, attendanceRecords:AttendanceRecord(*), achievements:Achievement(*), tuitionAttendance:TuitionAttendance(*)")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (!student) {
+  if (!studentData) {
     notFound();
   }
+
+  const student = {
+    ...studentData,
+    attendanceRecords: (studentData.attendanceRecords || []).sort((a: any, b: any) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    }),
+    achievements: (studentData.achievements || []).sort((a: any, b: any) => {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    }),
+    tuitionAttendance: (studentData.tuitionAttendance || [])
+      .sort((a: any, b: any) => {
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      })
+      .slice(0, 30),
+  };
 
   // Calculate age from DOB
   const getAge = (dob: Date) => {
@@ -63,13 +72,13 @@ export default async function StudentProfilePage({
 
   const totalMonthlyRecords = student.attendanceRecords.length;
   const averageAttendance = totalMonthlyRecords > 0
-    ? Math.round(student.attendanceRecords.reduce((acc, curr) => acc + curr.percentage, 0) / totalMonthlyRecords)
+    ? Math.round(student.attendanceRecords.reduce((acc: number, curr: any) => acc + curr.percentage, 0) / totalMonthlyRecords)
     : null;
 
   // Compute tuition attendance statistics
   const totalTuitionSessions = student.tuitionAttendance.length;
   const presentTuitionSessions = student.tuitionAttendance.filter(
-    (a) => a.status === "PRESENT"
+    (a: any) => a.status === "PRESENT"
   ).length;
   const tuitionAttendanceRate = totalTuitionSessions > 0
     ? Math.round((presentTuitionSessions / totalTuitionSessions) * 100)
@@ -330,7 +339,7 @@ export default async function StudentProfilePage({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {student.attendanceRecords.map((rec) => (
+                        {student.attendanceRecords.map((rec: any) => (
                           <tr key={rec.id} className="text-slate-700">
                             <td className="py-3 font-semibold text-xs">
                               {new Date(0, rec.month - 1).toLocaleString("en", {
@@ -374,7 +383,7 @@ export default async function StudentProfilePage({
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {student.tuitionAttendance.map((ta) => (
+                      {student.tuitionAttendance.map((ta: any) => (
                         <div
                           key={ta.id}
                           className={`p-2.5 rounded-lg border text-xs flex justify-between items-center ${

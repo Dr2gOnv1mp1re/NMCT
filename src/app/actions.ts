@@ -1,8 +1,7 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import { clerkClient } from "@clerk/nextjs/server";
-import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import fs from "fs/promises";
 import path from "path";
@@ -30,32 +29,38 @@ export async function inviteFieldOfficer(formData: {
       },
     });
 
-    // 2. Create the User row in the database
+    // 2. Create the User row in the database via Supabase Client
     // We use the unique invitation.id as a temporary placeholder for clerkUserId
-    const user = await db.user.create({
-      data: {
+    const { data: user, error: userError } = await supabase
+      .from("User")
+      .insert({
         clerkUserId: invitation.id,
         name,
         email,
-        role: Role.FIELD_OFFICER,
+        role: "FIELD_OFFICER",
         district,
         phone: phone || null,
         isActive: true,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (userError) throw userError;
 
     // 3. Log the activity in the audit trail
-    await db.activityLog.create({
-      data: {
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: adminUserId,
         action: `Invited field officer ${name}`,
-        metadata: JSON.stringify({
+        metadata: {
           officerEmail: email,
           district,
           invitationId: invitation.id,
-        }),
-      },
-    });
+        },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/admin");
     return { success: true, user };
@@ -136,10 +141,11 @@ export async function addStudent(data: {
     }
 
     // 1. Create the student in database
-    const student = await db.student.create({
-      data: {
+    const { data: student, error: studentError } = await supabase
+      .from("Student")
+      .insert({
         name,
-        dob: new Date(dob),
+        dob: new Date(dob).toISOString(),
         gender,
         tribe,
         aadhaarLast4: aadhaarLast4 || null,
@@ -154,25 +160,30 @@ export async function addStudent(data: {
         isTribal,
         goesToTuition,
         photoUrl,
-      },
-    });
+      })
+      .select()
+      .single();
+
+    if (studentError) throw studentError;
 
     // 2. Log activity in audit trail
-    await db.activityLog.create({
-      data: {
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: assignedOfficerId,
         action: `Added student ${name}`,
         studentId: student.id,
-        metadata: JSON.stringify({
+        metadata: {
           school,
           currentClass,
           district,
           village,
           isTribal,
           goesToTuition,
-        }),
-      },
-    });
+        },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/dashboard");
     revalidatePath("/students");
@@ -210,39 +221,42 @@ export async function importStudents(data: {
     }
 
     // Insert all records in a batch
-    const createdStudents = await Promise.all(
-      students.map(async (s) => {
-        return await db.student.create({
-          data: {
-            name: s.name,
-            dob: new Date(s.dob),
-            gender: s.gender,
-            tribe: s.tribe,
-            aadhaarLast4: s.aadhaarLast4 || null,
-            guardianName: s.guardianName,
-            guardianPhone: s.guardianPhone || null,
-            school: s.school,
-            currentClass: s.currentClass,
-            district: s.district,
-            village: s.village,
-            assignedOfficerId,
-            status: "ACTIVE",
-          },
-        });
-      }),
-    );
+    const recordsToInsert = students.map((s) => ({
+      name: s.name,
+      dob: new Date(s.dob).toISOString(),
+      gender: s.gender,
+      tribe: s.tribe,
+      aadhaarLast4: s.aadhaarLast4 || null,
+      guardianName: s.guardianName,
+      guardianPhone: s.guardianPhone || null,
+      school: s.school,
+      currentClass: s.currentClass,
+      district: s.district,
+      village: s.village,
+      assignedOfficerId,
+      status: "ACTIVE",
+    }));
+
+    const { data: createdStudents, error: importError } = await supabase
+      .from("Student")
+      .insert(recordsToInsert)
+      .select();
+
+    if (importError) throw importError;
 
     // Log the batch import activity in the audit trail
-    await db.activityLog.create({
-      data: {
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: assignedOfficerId,
         action: `Imported ${students.length} students via Excel/CSV`,
-        metadata: JSON.stringify({
+        metadata: {
           count: students.length,
           officerId: assignedOfficerId,
-        }),
-      },
-    });
+        },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/dashboard");
     revalidatePath("/students");
@@ -263,12 +277,12 @@ export async function logAttendance(data: {
   recordedById: string;
 }) {
   try {
-    const { studentId, month, year, daysPresent, daysTotal, recordedById } =
-      data;
+    const { studentId, month, year, daysPresent, daysTotal, recordedById } = data;
     const percentage = daysTotal > 0 ? (daysPresent / daysTotal) * 100 : 0;
 
-    const record = await db.attendanceRecord.create({
-      data: {
+    const { data: record, error: recordError } = await supabase
+      .from("AttendanceRecord")
+      .insert({
         studentId,
         month,
         year,
@@ -276,15 +290,22 @@ export async function logAttendance(data: {
         daysTotal,
         percentage,
         recordedById,
-      },
-    });
+      })
+      .select()
+      .single();
 
-    // Recalculate risk level based on simple criteria (e.g. attendance < 80% increases risk)
-    const recentRecords = await db.attendanceRecord.findMany({
-      where: { studentId },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-    });
+    if (recordError) throw recordError;
+
+    // Recalculate risk level based on simple criteria
+    const { data: recentRecords, error: recentError } = await supabase
+      .from("AttendanceRecord")
+      .select("*")
+      .eq("studentId", studentId)
+      .order("createdAt", { ascending: false })
+      .limit(3);
+
+    if (recentError) throw recentError;
+
     const avgAttendance =
       recentRecords.reduce((acc, curr) => acc + curr.percentage, 0) /
       (recentRecords.length || 1);
@@ -302,40 +323,40 @@ export async function logAttendance(data: {
       status = "AT_RISK";
     }
 
-    await db.student.update({
-      where: { id: studentId },
-      data: { status },
-    });
+    const { error: studentUpdateError } = await supabase
+      .from("Student")
+      .update({ status })
+      .eq("id", studentId);
 
-    await db.dropoutRiskScore.upsert({
-      where: { studentId },
-      create: {
-        studentId,
-        score: 100 - avgAttendance,
-        level,
-        factors: JSON.stringify({
-          avgAttendance,
-          recentPercentage: percentage,
-        }),
-      },
-      update: {
-        score: 100 - avgAttendance,
-        level,
-        factors: JSON.stringify({
-          avgAttendance,
-          recentPercentage: percentage,
-        }),
-      },
-    });
+    if (studentUpdateError) throw studentUpdateError;
 
-    await db.activityLog.create({
-      data: {
+    const { error: riskUpsertError } = await supabase
+      .from("DropoutRiskScore")
+      .upsert(
+        {
+          studentId,
+          score: 100 - avgAttendance,
+          level,
+          factors: {
+            avgAttendance,
+            recentPercentage: percentage,
+          },
+        },
+        { onConflict: "studentId" }
+      );
+
+    if (riskUpsertError) throw riskUpsertError;
+
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: recordedById,
         action: `Logged attendance for student (ID: ${studentId})`,
         studentId: studentId,
-        metadata: JSON.stringify({ month, year, percentage }),
-      },
-    });
+        metadata: { month, year, percentage },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/attendance");
     revalidatePath("/dashboard");
@@ -366,12 +387,14 @@ export async function addDBTRecord(data: {
     const { studentId, scholarshipName, amount, status, updatedById } = data;
 
     // Duplicate Check: check if student already has this scholarship scheme record
-    const existingRecord = await db.dBTRecord.findFirst({
-      where: {
-        studentId,
-        scholarshipName,
-      },
-    });
+    const { data: existingRecord, error: existError } = await supabase
+      .from("DBTRecord")
+      .select("*")
+      .eq("studentId", studentId)
+      .eq("scholarshipName", scholarshipName)
+      .maybeSingle();
+
+    if (existError) throw existError;
 
     if (existingRecord) {
       return {
@@ -380,24 +403,30 @@ export async function addDBTRecord(data: {
       };
     }
 
-    const record = await db.dBTRecord.create({
-      data: {
+    const { data: record, error: recordError } = await supabase
+      .from("DBTRecord")
+      .insert({
         studentId,
         scholarshipName,
         amount,
         status,
         updatedById,
-      },
-    });
+      })
+      .select()
+      .single();
 
-    await db.activityLog.create({
-      data: {
+    if (recordError) throw recordError;
+
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: updatedById,
         action: `Added DBT record for scholarship "${scholarshipName}"`,
         studentId: studentId,
-        metadata: JSON.stringify({ amount, status }),
-      },
-    });
+        metadata: { amount, status },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/dbt");
     revalidatePath("/dashboard");
@@ -431,28 +460,34 @@ export async function updateDBTStatus(data: {
     };
 
     if (status === "VERIFIED") {
-      updateData.verifiedDate = new Date();
+      updateData.verifiedDate = new Date().toISOString();
     } else if (status === "DISBURSED") {
-      updateData.disbursedDate = new Date();
+      updateData.disbursedDate = new Date().toISOString();
     } else if (status === "CONFIRMED") {
-      updateData.confirmedDate = new Date();
+      updateData.confirmedDate = new Date().toISOString();
     } else if (status === "ELIGIBLE") {
-      updateData.appliedDate = new Date();
+      updateData.appliedDate = new Date().toISOString();
     }
 
-    const record = await db.dBTRecord.update({
-      where: { id: recordId },
-      data: updateData,
-    });
+    const { data: record, error: recordError } = await supabase
+      .from("DBTRecord")
+      .update(updateData)
+      .eq("id", recordId)
+      .select()
+      .single();
 
-    await db.activityLog.create({
-      data: {
+    if (recordError) throw recordError;
+
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: updatedById,
         action: `Updated DBT scholarship status of "${record.scholarshipName}" to ${status}`,
         studentId: record.studentId,
-        metadata: JSON.stringify({ recordId, status, remarks }),
-      },
-    });
+        metadata: { recordId, status, remarks },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/dbt");
     revalidatePath("/dashboard");
@@ -478,15 +513,19 @@ export async function addAchievement(data: {
       throw new Error("Missing required fields");
     }
 
-    const achievement = await db.achievement.create({
-      data: {
+    const { data: achievement, error: achievementError } = await supabase
+      .from("Achievement")
+      .insert({
         studentId,
         title,
         event,
         award: award || null,
-        date: date ? new Date(date) : new Date(),
-      },
-    });
+        date: date ? new Date(date).toISOString() : new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (achievementError) throw achievementError;
 
     revalidatePath(`/students/${studentId}`);
     revalidatePath("/achievements");
@@ -500,9 +539,15 @@ export async function addAchievement(data: {
 
 export async function deleteAchievement(id: string) {
   try {
-    const achievement = await db.achievement.delete({
-      where: { id },
-    });
+    const { data: achievement, error: achievementError } = await supabase
+      .from("Achievement")
+      .delete()
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (achievementError) throw achievementError;
+
     revalidatePath(`/students/${achievement.studentId}`);
     revalidatePath("/achievements");
     return { success: true };
@@ -527,28 +572,19 @@ export async function logTuitionAttendance(data: {
     const parsedDate = new Date(date);
     parsedDate.setUTCHours(0, 0, 0, 0);
 
-    const results = await Promise.all(
-      records.map(async (record) => {
-        return await db.tuitionAttendance.upsert({
-          where: {
-            studentId_date: {
-              studentId: record.studentId,
-              date: parsedDate,
-            },
-          },
-          create: {
-            studentId: record.studentId,
-            date: parsedDate,
-            status: record.status,
-            recordedById,
-          },
-          update: {
-            status: record.status,
-            recordedById,
-          },
-        });
-      })
-    );
+    const upsertData = records.map((record) => ({
+      studentId: record.studentId,
+      date: parsedDate.toISOString(),
+      status: record.status,
+      recordedById,
+    }));
+
+    const { data: results, error: upsertError } = await supabase
+      .from("TuitionAttendance")
+      .upsert(upsertData, { onConflict: "studentId,date" })
+      .select();
+
+    if (upsertError) throw upsertError;
 
     revalidatePath("/attendance/tuition");
     return { success: true, count: results.length };
@@ -591,13 +627,22 @@ export async function disburseDBTRecord(recordId: string, officerId: string) {
 
 export async function toggleTuitionEnrollment(studentId: string) {
   try {
-    const student = await db.student.findUnique({ where: { id: studentId } });
-    if (!student) throw new Error("Student not found");
+    const { data: student, error: studentError } = await supabase
+      .from("Student")
+      .select("*")
+      .eq("id", studentId)
+      .single();
 
-    const updated = await db.student.update({
-      where: { id: studentId },
-      data: { goesToTuition: !student.goesToTuition },
-    });
+    if (studentError || !student) throw new Error("Student not found");
+
+    const { data: updated, error: updateError } = await supabase
+      .from("Student")
+      .update({ goesToTuition: !student.goesToTuition })
+      .eq("id", studentId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
 
     revalidatePath(`/students/${studentId}`);
     revalidatePath("/attendance/tuition");
@@ -622,8 +667,9 @@ export async function logBulkAttendance(data: {
       records.map(async (rec) => {
         const percentage = rec.daysTotal > 0 ? (rec.daysPresent / rec.daysTotal) * 100 : 0;
 
-        const record = await db.attendanceRecord.create({
-          data: {
+        const { data: record, error: recordError } = await supabase
+          .from("AttendanceRecord")
+          .insert({
             studentId: rec.studentId,
             month,
             year,
@@ -631,14 +677,21 @@ export async function logBulkAttendance(data: {
             daysTotal: rec.daysTotal,
             percentage,
             recordedById,
-          },
-        });
+          })
+          .select()
+          .single();
 
-        const recentRecords = await db.attendanceRecord.findMany({
-          where: { studentId: rec.studentId },
-          orderBy: { createdAt: "desc" },
-          take: 3,
-        });
+        if (recordError) throw recordError;
+
+        const { data: recentRecords, error: recentError } = await supabase
+          .from("AttendanceRecord")
+          .select("*")
+          .eq("studentId", rec.studentId)
+          .order("createdAt", { ascending: false })
+          .limit(3);
+
+        if (recentError) throw recentError;
+
         const avgAttendance =
           recentRecords.reduce((acc, curr) => acc + curr.percentage, 0) /
           (recentRecords.length || 1);
@@ -656,43 +709,43 @@ export async function logBulkAttendance(data: {
           status = "AT_RISK";
         }
 
-        await db.student.update({
-          where: { id: rec.studentId },
-          data: { status },
-        });
+        const { error: studentUpdateError } = await supabase
+          .from("Student")
+          .update({ status })
+          .eq("id", rec.studentId);
 
-        await db.dropoutRiskScore.upsert({
-          where: { studentId: rec.studentId },
-          create: {
-            studentId: rec.studentId,
-            score: 100 - avgAttendance,
-            level,
-            factors: JSON.stringify({
-              avgAttendance,
-              recentPercentage: percentage,
-            }),
-          },
-          update: {
-            score: 100 - avgAttendance,
-            level,
-            factors: JSON.stringify({
-              avgAttendance,
-              recentPercentage: percentage,
-            }),
-          },
-        });
+        if (studentUpdateError) throw studentUpdateError;
+
+        const { error: riskUpsertError } = await supabase
+          .from("DropoutRiskScore")
+          .upsert(
+            {
+              studentId: rec.studentId,
+              score: 100 - avgAttendance,
+              level,
+              factors: {
+                avgAttendance,
+                recentPercentage: percentage,
+              },
+            },
+            { onConflict: "studentId" }
+          );
+
+        if (riskUpsertError) throw riskUpsertError;
 
         return record;
       })
     );
 
-    await db.activityLog.create({
-      data: {
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
         userId: recordedById,
         action: `Logged bulk attendance for ${records.length} students`,
-        metadata: JSON.stringify({ month, year, studentIds: records.map((r) => r.studentId) }),
-      },
-    });
+        metadata: { month, year, studentIds: records.map((r) => r.studentId) },
+      });
+
+    if (logError) throw logError;
 
     revalidatePath("/attendance");
     revalidatePath("/dashboard");
@@ -704,5 +757,3 @@ export async function logBulkAttendance(data: {
     return { success: false, error: err?.message || "Something went wrong" };
   }
 }
-
-

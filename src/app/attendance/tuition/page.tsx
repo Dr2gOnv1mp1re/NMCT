@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import TuitionAttendanceForm from "./TuitionAttendanceForm";
 import Topbar from "@/components/Topbar";
@@ -10,27 +11,24 @@ export default async function TuitionAttendancePage() {
   const clerkUser = await currentUser();
   const email = clerkUser?.emailAddresses[0]?.emailAddress || "officer@nmct.org";
 
-  const officerDbUser = await db.user.findFirst({
-    where: { email },
-  });
+  const { data: officerDbUser } = await supabase
+    .from("User")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
   // Fetch tuition going students assigned to this officer
-  const students = await db.student.findMany({
-    where: {
-      assignedOfficerId: officerId,
-      goesToTuition: true,
-    },
-    select: {
-      id: true,
-      name: true,
-      village: true,
-      school: true,
-    },
-  });
+  const { data: studentsData } = await supabase
+    .from("Student")
+    .select("id, name, village, school")
+    .eq("assignedOfficerId", officerId)
+    .eq("goesToTuition", true);
+
+  const students = studentsData || [];
 
   // Sort alphabetically
   students.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
@@ -38,18 +36,16 @@ export default async function TuitionAttendancePage() {
   const studentIds = students.map((s) => s.id);
 
   // Fetch tuition attendance logs for these students
-  const initialLogs = await db.tuitionAttendance.findMany({
-    where: {
-      studentId: {
-        in: studentIds,
-      },
-    },
-    select: {
-      studentId: true,
-      date: true,
-      status: true,
-    },
-  });
+  const { data: initialLogsData } = await supabase
+    .from("TuitionAttendance")
+    .select("studentId, date, status")
+    .in("studentId", studentIds);
+
+  const initialLogs = (initialLogsData || []).map((log: any) => ({
+    studentId: log.studentId,
+    date: new Date(log.date),
+    status: log.status,
+  }));
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex text-[#0F172A] font-sans antialiased">

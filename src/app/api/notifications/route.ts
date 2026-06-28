@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -26,15 +26,15 @@ export async function GET() {
     const threeMonthsAgo = new Date();
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-    const lowAttendance = await db.attendanceRecord.findMany({
-      where: {
-        percentage: { lt: 75 },
-        createdAt: { gte: threeMonthsAgo },
-      },
-      include: { student: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 5,
-    });
+    const { data: lowAttendanceData } = await supabase
+      .from("AttendanceRecord")
+      .select("*, student:Student(name)")
+      .lt("percentage", 75)
+      .gte("createdAt", threeMonthsAgo.toISOString())
+      .order("createdAt", { ascending: false })
+      .limit(5);
+
+    const lowAttendance = lowAttendanceData || [];
 
     for (const rec of lowAttendance) {
       const pct = Math.round(rec.percentage);
@@ -42,8 +42,8 @@ export async function GET() {
       notifications.push({
         id: `att_${rec.id}`,
         type: isCritical ? "critical" : "warning",
-        message: `Attendance ${isCritical ? "critical" : "warning"}: ${rec.student.name} fell to ${pct}% (${isCritical ? "Critical" : "At Risk"})`,
-        time: timeAgo(rec.createdAt),
+        message: `Attendance ${isCritical ? "critical" : "warning"}: ${rec.student?.name} fell to ${pct}% (${isCritical ? "Critical" : "At Risk"})`,
+        time: timeAgo(new Date(rec.createdAt)),
       });
     }
 
@@ -51,22 +51,22 @@ export async function GET() {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const recentDisbursements = await db.dBTRecord.findMany({
-      where: {
-        status: { in: ["DISBURSED", "CONFIRMED"] },
-        createdAt: { gte: thirtyDaysAgo },
-      },
-      include: { student: { select: { name: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 3,
-    });
+    const { data: recentDisbursementsData } = await supabase
+      .from("DBTRecord")
+      .select("*, student:Student(name)")
+      .in("status", ["DISBURSED", "CONFIRMED"])
+      .gte("createdAt", thirtyDaysAgo.toISOString())
+      .order("createdAt", { ascending: false })
+      .limit(3);
+
+    const recentDisbursements = recentDisbursementsData || [];
 
     for (const rec of recentDisbursements) {
       notifications.push({
         id: `dbt_${rec.id}`,
         type: "success",
-        message: `DBT ${rec.status === "CONFIRMED" ? "Confirmed" : "Disbursed"}: ₹${rec.amount.toLocaleString("en-IN")} for ${rec.student.name}`,
-        time: timeAgo(rec.createdAt),
+        message: `DBT ${rec.status === "CONFIRMED" ? "Confirmed" : "Disbursed"}: ₹${rec.amount.toLocaleString("en-IN")} for ${rec.student?.name}`,
+        time: timeAgo(new Date(rec.createdAt)),
       });
     }
 
@@ -74,22 +74,22 @@ export async function GET() {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-    const atRiskStudents = await db.student.findMany({
-      where: {
-        status: "AT_RISK",
-        updatedAt: { gte: sevenDaysAgo },
-      },
-      select: { id: true, name: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-    });
+    const { data: atRiskStudentsData } = await supabase
+      .from("Student")
+      .select("id, name, updatedAt")
+      .eq("status", "AT_RISK")
+      .gte("updatedAt", sevenDaysAgo.toISOString())
+      .order("updatedAt", { ascending: false })
+      .limit(3);
+
+    const atRiskStudents = atRiskStudentsData || [];
 
     for (const s of atRiskStudents) {
       notifications.push({
         id: `risk_${s.id}`,
         type: "warning",
         message: `${s.name} has been flagged as AT RISK`,
-        time: timeAgo(s.updatedAt),
+        time: timeAgo(new Date(s.updatedAt)),
       });
     }
 

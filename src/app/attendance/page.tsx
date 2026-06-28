@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
 import AttendanceDashboard from "./AttendanceDashboard";
 import Topbar from "@/components/Topbar";
@@ -10,22 +11,31 @@ export default async function AttendancePage() {
   const clerkUser = await currentUser();
   const email = clerkUser?.emailAddresses[0]?.emailAddress || "officer@nmct.org";
 
-  const officerDbUser = await db.user.findFirst({
-    where: { email },
-  });
+  const { data: officerDbUser } = await supabase
+    .from("User")
+    .select("*")
+    .eq("email", email)
+    .maybeSingle();
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
   // Fetch assigned students with attendance records
-  const students = await db.student.findMany({
-    where: { assignedOfficerId: officerId },
-    include: {
-      attendanceRecords: {
-        orderBy: [{ year: "desc" }, { month: "desc" }],
-      },
-    },
+  const { data: studentsData } = await supabase
+    .from("Student")
+    .select("*, attendanceRecords:AttendanceRecord(*)")
+    .eq("assignedOfficerId", officerId);
+
+  const students = (studentsData || []).map((student: any) => {
+    const attendanceRecords = (student.attendanceRecords || []).sort((a: any, b: any) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.month - a.month;
+    });
+    return {
+      ...student,
+      attendanceRecords,
+    };
   });
 
   students.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
