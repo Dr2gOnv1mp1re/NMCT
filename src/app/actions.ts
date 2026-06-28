@@ -179,11 +179,30 @@ export async function addStudent(data: {
         const buffer = Buffer.from(base64Data, 'base64');
         const ext = fileType.split('/')[1] || 'jpg';
         const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
-        const uploadDir = path.join(process.cwd(), "public", "uploads");
-        await fs.mkdir(uploadDir, { recursive: true });
-        const filePath = path.join(uploadDir, fileName);
-        await fs.writeFile(filePath, buffer);
-        photoUrl = `/uploads/${fileName}`;
+
+        try {
+          // Attempt to upload to Supabase Storage bucket 'student-photos'
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("student-photos")
+            .upload(fileName, buffer, {
+              contentType: fileType,
+              duplex: 'half',
+              upsert: true
+            } as any);
+
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage
+              .from("student-photos")
+              .getPublicUrl(fileName);
+            photoUrl = urlData.publicUrl;
+          } else {
+            console.warn("Supabase storage upload failed, falling back to base64 database storage:", uploadError);
+            photoUrl = photoBase64;
+          }
+        } catch (storageErr) {
+          console.warn("Supabase storage upload exception, falling back to base64 database storage:", storageErr);
+          photoUrl = photoBase64;
+        }
       }
     }
 
