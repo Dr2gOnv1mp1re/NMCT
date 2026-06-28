@@ -10,17 +10,17 @@ export default function LandingPage() {
     <>
       <style>{`
         :root {
-          --forest: #0B1329;
-          --forest-mid: #1E3A8A;
-          --leaf: #2563EB;
-          --lime: #38BDF8;
-          --gold: #F59E0B;
-          --gold-light: #FCD34D;
-          --cream: #F8FAFC;
-          --paper: #F1F5F9;
-          --ink: #0F172A;
-          --muted: #64748B;
-          --border: rgba(15,23,42,0.08);
+          --forest: #0B1329; /* Deep Navy Blue */
+          --forest-mid: #1C2541; /* Dark Navy Mid */
+          --leaf: #3A506B; /* Slate Navy Blue */
+          --lime: #5BC0BE; /* Soft Ocean Cyan */
+          --gold: #C8943A;
+          --gold-light: #E8B96A;
+          --cream: #F4F6FC; /* Clean Cool White Tint */
+          --paper: #E6EAEF; /* Cool Light Grey Paper */
+          --ink: #0B0C10; /* Very Dark Navy Ink */
+          --muted: #5C677D; /* Cool Muted Grey */
+          --border: rgba(11,19,41,0.13);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -41,7 +41,7 @@ export default function LandingPage() {
           position: sticky;
           top: 0;
           z-index: 50;
-          background: rgba(248,250,252,0.92);
+          background: rgba(244,246,252,0.92);
           backdrop-filter: blur(12px);
           border-bottom: 1px solid var(--border);
           padding: 0 4rem;
@@ -206,7 +206,7 @@ export default function LandingPage() {
           transition: border-color 0.2s, background 0.2s;
           background: transparent;
         }
-        .btn-ghost:hover { border-color: var(--leaf); background: rgba(37,99,235,0.06); }
+        .btn-ghost:hover { border-color: var(--leaf); background: rgba(58,80,107,0.06); }
 
         /* ── HERO CARD ── */
         .hero-visual {
@@ -261,8 +261,43 @@ export default function LandingPage() {
           color: var(--muted);
         }
 
+        .hero-badge {
+          background: var(--forest);
+          border-radius: 10px;
+          padding: 1.2rem 1.6rem;
+          display: flex;
+          align-items: center;
+          gap: 1.2rem;
+          animation: cardIn 0.7s 0.1s ease both;
+        }
 
-        /* ── ABOUT STRIP ── */
+        .badge-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: var(--lime);
+          flex-shrink: 0;
+          box-shadow: 0 0 0 4px rgba(91,192,190,0.2);
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 0 0 4px rgba(91,192,190,0.2); }
+          50% { box-shadow: 0 0 0 8px rgba(91,192,190,0.08); }
+        }
+
+        .badge-text {
+          font-size: 0.82rem;
+          color: rgba(244,246,252,0.8);
+          line-height: 1.4;
+        }
+
+        .badge-text strong {
+          color: var(--lime);
+          font-weight: 500;
+          display: block;
+          font-size: 0.88rem;
+        }
 
         .about-strip {
           background: var(--forest);
@@ -288,13 +323,13 @@ export default function LandingPage() {
 
         .about-body {
           font-size: 0.88rem;
-          color: rgba(248,250,252,0.7);
+          color: rgba(244,246,252,0.7);
           line-height: 1.75;
           font-weight: 300;
         }
 
         .about-stat {
-          border-left: 1px solid rgba(56,189,248,0.2);
+          border-left: 1px solid rgba(91,192,190,0.2);
           padding-left: 1.5rem;
         }
 
@@ -706,7 +741,7 @@ export default function LandingPage() {
       <nav>
         <Link href="/" className="nav-brand">
           <div className="nav-emblem">N</div>
-          <span className="nav-name">NMCT EduTrack</span>
+          <span className="nav-name">NMCT STUDENT TRACKING SYSTEM</span>
         </Link>
         <ul className="nav-links">
           <li><a href="#modules">Modules</a></li>
@@ -756,6 +791,13 @@ export default function LandingPage() {
             <div className="stat-card lime">
               <div className="stat-num">75%</div>
               <div className="stat-label">Attendance threshold</div>
+            </div>
+          </div>
+          <div className="hero-badge">
+            <div className="badge-dot"></div>
+            <div className="badge-text">
+              <strong>Early-warning alerts active</strong>
+              Auto-flags at-risk students · SMS alerts in Tamil to parents
             </div>
           </div>
         </div>
