@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Define public routes
@@ -24,7 +24,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // Retrieve user auth state
   const authObj = await auth();
-  const { userId, sessionClaims } = authObj;
+  const { userId } = authObj;
 
   // If not logged in, redirect to login
   if (!userId) {
@@ -32,13 +32,13 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Get user role from Clerk session publicMetadata
-  const metadata = sessionClaims?.publicMetadata as { role?: string } | undefined;
-  const role = metadata?.role;
-
-  // Protect admin-only routes
+  // Protect admin-only routes: Only allow nmctadmin@gmail.com
   if (isAdminRoute(req)) {
-    if (role !== "ADMIN") {
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(userId);
+    const email = user.emailAddresses[0]?.emailAddress;
+
+    if (email !== "nmctadmin@gmail.com") {
       // Redirect unauthorized users to their dashboard
       const dashboardUrl = new URL("/dashboard", req.url);
       return NextResponse.redirect(dashboardUrl);
