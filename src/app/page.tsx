@@ -710,8 +710,6 @@ export default function LandingPage() {
         </Link>
         <ul className="nav-links">
           <li><a href="#modules">Modules</a></li>
-          <li><a href="#students">Students</a></li>
-          <li><a href="#status">Status Guide</a></li>
           <li><a href="https://nmctngo.org" target="_blank" rel="noopener noreferrer">nmctngo.org</a></li>
           <Show when="signed-out">
             <li><Link href="/sign-in" className="nav-cta">Sign in</Link></li>
@@ -836,98 +834,6 @@ export default function LandingPage() {
           </div>
         </div>
 
-      </section>
-
-      {/* STUDENT CATEGORIES */}
-      <section className="categories" id="students">
-        <div className="categories-inner">
-          <p className="section-eyebrow">Who we serve</p>
-          <h2 className="section-title">All students, one system</h2>
-          <p className="section-sub">EduTrack covers every child under NMCT&apos;s care — from hill tribe communities to urban non-tribal students in government schools.</p>
-
-          <div className="categories-grid">
-            <div className="cat-card">
-              <div className="cat-header">
-                <div className="cat-title">Tribal Students</div>
-                <span className="cat-badge badge-tribal">Tribal</span>
-              </div>
-              <div className="cat-body">
-                <p className="cat-desc">
-                  Children from indigenous hill communities in the Karamadai and Valparai blocks — many of whom NMCT rescues from brick kilns and enrolls into mainstream government schools. Scholarships and tuition support are tracked here.
-                </p>
-                <div className="cat-communities">
-                  <span className="community-tag">Irula community</span>
-                  <span className="community-tag">Paniya community</span>
-                  <span className="community-tag">Kurumba community</span>
-                  <span className="community-tag">Karamadai Block</span>
-                  <span className="community-tag">Valparai Block</span>
-                  <span className="community-tag">Hill hamlet homesteads</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="cat-card">
-              <div className="cat-header">
-                <div className="cat-title">Non-Tribal Students</div>
-                <span className="cat-badge badge-general">General</span>
-              </div>
-              <div className="cat-body">
-                <p className="cat-desc">
-                  Underprivileged youth from urban and peri-urban Coimbatore and Tirupur — including orphans, children of daily-wage workers, and students enrolled through CSR projects like the FORD Happy School and Walkaroo Vazhvizhi tuition program.
-                </p>
-                <div className="cat-communities">
-                  <span className="community-tag">Coimbatore district</span>
-                  <span className="community-tag">Tirupur district</span>
-                  <span className="community-tag">FORD Happy School</span>
-                  <span className="community-tag">Walkaroo Vazhvizhi</span>
-                  <span className="community-tag">Grades 5–8 tuition</span>
-                  <span className="community-tag">Higher ed. track</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* STATUS LEGEND */}
-      <section className="status-section" id="status">
-        <p className="section-eyebrow">Student status</p>
-        <h2 className="section-title">Five states, one clear picture</h2>
-        <p className="section-sub">Every student in the system carries a status that updates as their situation changes. Officers act on what they see.</p>
-
-        <div className="status-grid">
-          <div className="status-card">
-            <div className="status-dot dot-active"></div>
-            <div className="status-name">Active</div>
-            <div className="status-code">ACTIVE</div>
-            <p className="status-desc">Currently enrolled and attending school. No interventions needed.</p>
-          </div>
-          <div className="status-card">
-            <div className="status-dot dot-atrisk"></div>
-            <div className="status-name">At Risk</div>
-            <div className="status-code">AT_RISK</div>
-            <p className="status-desc">Auto-flagged when attendance drops below 75% or grades decline. Officer follow-up required.</p>
-          </div>
-          <div className="status-card">
-            <div className="status-dot dot-dropout"></div>
-            <div className="section-name" style={{ display: "none" }}>Dropped Out</div>
-            <div className="status-name">Dropped Out</div>
-            <div className="status-code">DROPPED_OUT</div>
-            <p className="status-desc">Student has discontinued education. Re-enrollment intervention active.</p>
-          </div>
-          <div className="status-card">
-            <div className="status-dot dot-migrated"></div>
-            <div className="status-name">Migrated</div>
-            <div className="status-code">MIGRATED</div>
-            <p className="status-desc">Family relocated — typically seasonal agricultural labor. Case handed off to district officer.</p>
-          </div>
-          <div className="status-card">
-            <div className="status-dot dot-graduated"></div>
-            <div className="status-name">Graduated</div>
-            <div className="status-code">GRADUATED</div>
-            <p className="status-desc">Completed entire educational track — school, college, or vocational training.</p>
-          </div>
-        </div>
       </section>
 
       {/* TECH STRIP */}
