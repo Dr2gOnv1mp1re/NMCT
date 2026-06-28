@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 // Define public routes
@@ -9,41 +9,26 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
 ]);
 
-// Define admin-only routes
-const isAdminRoute = createRouteMatcher([
-  "/admin(.*)",
-  "/reports(.*)",
-  "/activity-log(.*)",
-]);
-
 export default clerkMiddleware(async (auth, req) => {
   // If public route, let them pass
   if (isPublicRoute(req)) {
     return NextResponse.next();
   }
 
-  // Retrieve user auth state
+  // Retrieve user auth state — Edge-safe, reads from JWT only
   const authObj = await auth();
   const { userId } = authObj;
 
-  // If not logged in, redirect to login
+  // If not logged in, redirect to sign-in
   if (!userId) {
     const loginUrl = new URL("/sign-in", req.url);
     return NextResponse.redirect(loginUrl);
   }
 
-  // Protect admin-only routes: Only allow nmctadmin@gmail.com
-  if (isAdminRoute(req)) {
-    const clerk = await clerkClient();
-    const user = await clerk.users.getUser(userId);
-    const email = user.emailAddresses[0]?.emailAddress;
-
-    if (email !== "nmctadmin@gmail.com") {
-      // Redirect unauthorized users to their dashboard
-      const dashboardUrl = new URL("/dashboard", req.url);
-      return NextResponse.redirect(dashboardUrl);
-    }
-  }
+  // Admin email check is intentionally NOT done here.
+  // clerkClient().users.getUser() is a Node.js backend call and crashes on
+  // Vercel's Edge Runtime. Admin route protection (nmctadmin@gmail.com check)
+  // is enforced server-side inside the /admin page using currentUser().
 
   return NextResponse.next();
 });
