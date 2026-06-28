@@ -2,8 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
+import { Show, UserButton, useUser } from "@clerk/nextjs";
 
 export default function LandingPage() {
+  const { user } = useUser();
   return (
     <>
       <style>{`
@@ -711,7 +713,17 @@ export default function LandingPage() {
           <li><a href="#students">Students</a></li>
           <li><a href="#status">Status Guide</a></li>
           <li><a href="https://nmctngo.org" target="_blank" rel="noopener noreferrer">nmctngo.org</a></li>
-          <li><Link href="/sign-in" className="nav-cta">Sign in</Link></li>
+          <Show when="signed-out">
+            <li><Link href="/sign-in" className="nav-cta">Sign in</Link></li>
+          </Show>
+          <Show when="signed-in">
+            <li style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 500 }}>
+                {user?.primaryEmailAddress?.emailAddress}
+              </span>
+              <UserButton />
+            </li>
+          </Show>
         </ul>
       </nav>
 

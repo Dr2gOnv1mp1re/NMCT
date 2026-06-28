@@ -287,27 +287,8 @@ export default function ImportStudentsModal({
             </div>
           )}
 
-          {/* Guidelines */}
-          <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              CSV Ingestion Instructions
-            </h4>
-            <ul className="text-xs text-slate-600 list-disc pl-5 space-y-1">
-              <li>
-                Export your Excel spreadsheet as a **CSV (Comma Delimited)** file.
-              </li>
-              <li>
-                Ensure your file includes columns for:{" "}
-                <strong>
-                  Name, DOB, Gender, Tribe, AadhaarLast4, GuardianName, GuardianPhone, School,
-                  Class, Village
-                </strong>
-                .
-              </li>
-              <li>Dates must follow the standard <strong>YYYY-MM-DD</strong> format.</li>
-              <li>Gender must match <strong>MALE</strong>, <strong>FEMALE</strong>, or <strong>OTHER</strong>.</li>
-            </ul>
-          </div>
+
+
 
           {/* File Selector */}
           {!file && (

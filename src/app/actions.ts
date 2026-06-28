@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
 import { supabase } from "@/lib/supabase";
@@ -5,6 +6,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import fs from "fs/promises";
 import path from "path";
+import crypto from "crypto";
 
 export async function inviteFieldOfficer(formData: {
   name: string;
@@ -20,21 +22,66 @@ export async function inviteFieldOfficer(formData: {
       throw new Error("Missing required fields");
     }
 
-    // 1. Create Clerk invitation
+    // 0. Check if user already exists in database
+    const { data: existingDbUser } = await supabase
+      .from("User")
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingDbUser) {
+      throw new Error("A user with this email address already exists in the system.");
+    }
+
     const clerk = await clerkClient();
-    const invitation = await clerk.invitations.createInvitation({
-      emailAddress: email,
-      publicMetadata: {
-        role: "FIELD_OFFICER",
-      },
+    let invitation = null;
+    let clerkUserId = null;
+
+    // Check if user is already registered in Clerk
+    const registeredUsers = await clerk.users.getUserList({
+      emailAddress: [email],
     });
 
+    if (registeredUsers.data && registeredUsers.data.length > 0) {
+      clerkUserId = registeredUsers.data[0].id;
+      console.log(`User ${email} already registered in Clerk with ID: ${clerkUserId}`);
+    } else {
+      // Create or recycle invitation
+      try {
+        invitation = await clerk.invitations.createInvitation({
+          emailAddress: email,
+          publicMetadata: {
+            role: "FIELD_OFFICER",
+          },
+        });
+        clerkUserId = invitation.id;
+      } catch (e: any) {
+        console.log("Error creating invitation, checking for duplicates...", e);
+        const list = await clerk.invitations.getInvitationList();
+        const existing = list.data.find(
+          (inv: any) => inv.emailAddress === email && inv.status === "pending"
+        );
+        if (existing) {
+          console.log(`Found pending invitation ${existing.id} for ${email}. Revoking and retrying...`);
+          await clerk.invitations.revokeInvitation(existing.id);
+          invitation = await clerk.invitations.createInvitation({
+            emailAddress: email,
+            publicMetadata: {
+              role: "FIELD_OFFICER",
+            },
+          });
+          clerkUserId = invitation.id;
+        } else {
+          throw e;
+        }
+      }
+    }
+
     // 2. Create the User row in the database via Supabase Client
-    // We use the unique invitation.id as a temporary placeholder for clerkUserId
     const { data: user, error: userError } = await supabase
       .from("User")
       .insert({
-        clerkUserId: invitation.id,
+        clerkUserId: clerkUserId,
         name,
         email,
         role: "FIELD_OFFICER",
@@ -56,7 +103,7 @@ export async function inviteFieldOfficer(formData: {
         metadata: {
           officerEmail: email,
           district,
-          invitationId: invitation.id,
+          invitationId: invitation?.id || clerkUserId,
         },
       });
 
@@ -141,9 +188,11 @@ export async function addStudent(data: {
     }
 
     // 1. Create the student in database
+    const now = new Date().toISOString();
     const { data: student, error: studentError } = await supabase
       .from("Student")
       .insert({
+        id: crypto.randomUUID(),
         name,
         dob: new Date(dob).toISOString(),
         gender,
@@ -160,6 +209,8 @@ export async function addStudent(data: {
         isTribal,
         goesToTuition,
         photoUrl,
+        createdAt: now,
+        updatedAt: now,
       })
       .select()
       .single();
@@ -221,7 +272,9 @@ export async function importStudents(data: {
     }
 
     // Insert all records in a batch
+    const batchNow = new Date().toISOString();
     const recordsToInsert = students.map((s) => ({
+      id: crypto.randomUUID(),
       name: s.name,
       dob: new Date(s.dob).toISOString(),
       gender: s.gender,
@@ -235,6 +288,8 @@ export async function importStudents(data: {
       village: s.village,
       assignedOfficerId,
       status: "ACTIVE",
+      createdAt: batchNow,
+      updatedAt: batchNow,
     }));
 
     const { data: createdStudents, error: importError } = await supabase

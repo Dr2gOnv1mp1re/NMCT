@@ -21,11 +21,12 @@ export default async function AttendancePage() {
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
-  // Fetch assigned students with attendance records
-  const { data: studentsData } = await supabase
-    .from("Student")
-    .select("*, attendanceRecords:AttendanceRecord(*)")
-    .eq("assignedOfficerId", officerId);
+  // Fetch assigned students with attendance records (or all if admin)
+  let query = supabase.from("Student").select("*, attendanceRecords:AttendanceRecord(*)");
+  if (officerDbUser?.role !== "ADMIN") {
+    query = query.eq("assignedOfficerId", officerId);
+  }
+  const { data: studentsData } = await query;
 
   const students = (studentsData || []).map((student: any) => {
     const attendanceRecords = (student.attendanceRecords || []).sort((a: any, b: any) => {

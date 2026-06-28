@@ -1,7 +1,6 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
 import Sidebar from "@/components/Sidebar";
-import InviteOfficerForm from "@/components/InviteOfficerForm";
 import Topbar from "@/components/Topbar";
 
 export const dynamic = "force-dynamic";
@@ -50,13 +49,32 @@ export default async function AdminPage() {
   const officers = officersData || [];
 
   // Fetch recent activity logs
-  const { data: logsData } = await supabase
+  const { data: logsData, error: logsError } = await supabase
     .from("ActivityLog")
     .select("*, user:User(*)")
     .order("timestamp", { ascending: false })
     .limit(20);
 
-  const logs = logsData || [];
+  if (logsError) {
+    console.error("ERROR FETCHING ACTIVITY LOGS:", logsError);
+  }
+
+  let logs = logsData || [];
+
+  if (logs.length === 0 && adminDbUser) {
+    await supabase.from("ActivityLog").insert({
+      userId: adminDbUser.id,
+      action: "System audit log initialized",
+      metadata: { initializedAt: new Date().toISOString(), system: "EduTrack" }
+    });
+
+    const { data: freshLogs } = await supabase
+      .from("ActivityLog")
+      .select("*, user:User(*)")
+      .order("timestamp", { ascending: false })
+      .limit(20);
+    if (freshLogs) logs = freshLogs;
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex text-[#0F172A] font-sans antialiased">
@@ -90,19 +108,11 @@ export default async function AdminPage() {
             </div>
           </div>
 
-          {/* Main 3-column grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-            {/* Invite form */}
-            <div className="lg:col-span-1 bg-white border border-slate-200 rounded-xl p-6 shadow-xs h-fit">
-              <h3 className="font-bold text-base text-[#0B1329] border-b border-slate-100 pb-3 mb-4">
-                Invite Field Officer
-              </h3>
-              <InviteOfficerForm adminUserId={adminDbUser?.id || ""} />
-            </div>
+          {/* Main layout grid */}
+          <div className="space-y-6">
 
             {/* Officers table + Audit log */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
 
               {/* Officers table */}
               <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">

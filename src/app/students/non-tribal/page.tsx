@@ -48,12 +48,12 @@ export default async function NonTribalStudentsPage() {
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
-  // 4. Fetch assigned non-tribal students
-  const { data: studentsData } = await supabase
-    .from("Student")
-    .select("*")
-    .eq("assignedOfficerId", officerId)
-    .eq("isTribal", false);
+  // 4. Fetch assigned non-tribal students (or all if admin)
+  let query = supabase.from("Student").select("*").eq("isTribal", false);
+  if (officerDbUser?.role !== "ADMIN") {
+    query = query.eq("assignedOfficerId", officerId);
+  }
+  const { data: studentsData } = await query;
 
   const students = studentsData || [];
 

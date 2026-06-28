@@ -48,11 +48,12 @@ export default async function StudentsPage() {
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
-  // 4. Fetch assigned students
-  const { data: studentsData } = await supabase
-    .from("Student")
-    .select("*")
-    .eq("assignedOfficerId", officerId);
+  // 4. Fetch assigned students (or all if admin)
+  let query = supabase.from("Student").select("*");
+  if (officerDbUser?.role !== "ADMIN") {
+    query = query.eq("assignedOfficerId", officerId);
+  }
+  const { data: studentsData } = await query;
 
   const students = studentsData || [];
 

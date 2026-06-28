@@ -21,12 +21,15 @@ export default async function TuitionAttendancePage() {
   const officerName = officerDbUser?.name || "Demo Officer";
   const officerDistrict = officerDbUser?.district || "Nilgiris";
 
-  // Fetch tuition going students assigned to this officer
-  const { data: studentsData } = await supabase
+  // Fetch tuition going students assigned to this officer (or all if admin)
+  let query = supabase
     .from("Student")
     .select("id, name, village, school")
-    .eq("assignedOfficerId", officerId)
     .eq("goesToTuition", true);
+  if (officerDbUser?.role !== "ADMIN") {
+    query = query.eq("assignedOfficerId", officerId);
+  }
+  const { data: studentsData } = await query;
 
   const students = studentsData || [];
 
