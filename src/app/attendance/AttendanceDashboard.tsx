@@ -4,8 +4,7 @@ import React, { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { logAttendance, logBulkAttendance } from "@/app/actions";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+
 
 interface AttendanceRecord {
   id: string;
@@ -184,7 +183,9 @@ export default function AttendanceDashboard({
   };
 
   // ── PDF Export ──────────────────────────────────────────────
-  const exportAttendancePDF = () => {
+  const exportAttendancePDF = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: autoTable } = await import("jspdf-autotable");
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
     const now = new Date();

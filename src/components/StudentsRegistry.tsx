@@ -45,6 +45,7 @@ export default function StudentsRegistry({
   const [level, setLevel] = useState("All levels");
   const [status, setStatus] = useState("All statuses");
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [tribeCategory, setTribeCategory] = useState("All categories");
 
   // Filter students based on search, level standard range, and status
   const filteredStudents = students.filter((s) => {
@@ -101,7 +102,13 @@ export default function StudentsRegistry({
     // 3. Status match
     const matchesStatus = status === "All statuses" || s.status === status;
 
-    return matchesSearch && matchesLevel && matchesStatus;
+    // 4. Tribe Category match
+    const matchesTribeCategory =
+      tribeCategory === "All categories" ||
+      (tribeCategory === "Tribal" && s.isTribal) ||
+      (tribeCategory === "Non-Tribal" && !s.isTribal);
+
+    return matchesSearch && matchesLevel && matchesStatus && matchesTribeCategory;
   });
 
   // Calculate age from DOB
@@ -263,6 +270,19 @@ export default function StudentsRegistry({
                 <option value="DROPPED_OUT">Dropped Out</option>
                 <option value="MIGRATED">Migrated</option>
                 <option value="GRADUATED">Graduated</option>
+              </select>
+            </div>
+
+            {/* Filter Tribe Category Dropdown */}
+            <div className="w-48 relative">
+              <select
+                className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-sky-500 bg-white cursor-pointer"
+                value={tribeCategory}
+                onChange={(e) => setTribeCategory(e.target.value)}
+              >
+                <option value="All categories">All categories</option>
+                <option value="Tribal">Tribal Students</option>
+                <option value="Non-Tribal">Non-Tribal Students</option>
               </select>
             </div>
           </div>

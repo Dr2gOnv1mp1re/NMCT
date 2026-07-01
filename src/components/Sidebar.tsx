@@ -71,30 +71,6 @@ export default function Sidebar({
           <span>👥</span>
           <span>Students</span>
         </Link>
-        <div className="pl-6 space-y-1">
-          <Link
-            href="/students/tribal"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition ${
-              isActive("/students/tribal")
-                ? "text-sky-400 font-bold bg-white/5"
-                : "text-white/65 hover:text-white hover:bg-white/5"
-            }`}
-          >
-            <span>🏹</span>
-            <span>Tribal Students</span>
-          </Link>
-          <Link
-            href="/students/non-tribal"
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition ${
-              isActive("/students/non-tribal")
-                ? "text-sky-400 font-bold bg-white/5"
-                : "text-white/65 hover:text-white hover:bg-white/5"
-            }`}
-          >
-            <span>🌍</span>
-            <span>Non-Tribal Students</span>
-          </Link>
-        </div>
 
         <Link
           href="/attendance"

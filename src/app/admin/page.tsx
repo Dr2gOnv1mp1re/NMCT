@@ -52,7 +52,7 @@ export default async function AdminPage() {
   const { data: logsData, error: logsError } = await supabase
     .from("ActivityLog")
     .select("*, user:User(*)")
-    .order("timestamp", { ascending: false })
+    .order("createdAt", { ascending: false })
     .limit(20);
 
   if (logsError) {
@@ -71,7 +71,7 @@ export default async function AdminPage() {
     const { data: freshLogs } = await supabase
       .from("ActivityLog")
       .select("*, user:User(*)")
-      .order("timestamp", { ascending: false })
+      .order("createdAt", { ascending: false })
       .limit(20);
     if (freshLogs) logs = freshLogs;
   }
@@ -211,7 +211,7 @@ export default async function AdminPage() {
                           </div>
                         </div>
                         <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap pt-1">
-                          {new Date(log.timestamp).toLocaleTimeString([], {
+                          {new Date(log.createdAt).toLocaleTimeString([], {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}

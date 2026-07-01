@@ -255,8 +255,6 @@ export async function addStudent(data: {
 
     revalidatePath("/dashboard");
     revalidatePath("/students");
-    revalidatePath("/students/tribal");
-    revalidatePath("/students/non-tribal");
     return { success: true, student };
   } catch (error: unknown) {
     const err = error as Error;
