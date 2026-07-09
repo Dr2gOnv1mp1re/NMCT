@@ -435,7 +435,7 @@ export default function StudentsRegistry({
                       const newStatus = e.target.value;
                       if (!newStatus) return;
                       if (window.confirm(`Are you sure you want to change the status of ${selectedIds.length} students to ${newStatus}?`)) {
-                        const res = await bulkUpdateStudentStatus(selectedIds, newStatus as any, officerId, officerName);
+                        const res = await bulkUpdateStudentStatus(selectedIds, newStatus as "ACTIVE" | "AT_RISK" | "DROPPED_OUT" | "MIGRATED" | "GRADUATED", officerId, officerName);
                         if (res.success) {
                           alert("Status updated successfully!");
                           setSelectedIds([]);

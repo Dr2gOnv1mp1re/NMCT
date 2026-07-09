@@ -1228,11 +1228,10 @@ export async function bulkUpdateStudentStatus(ids: string[], status: "ACTIVE" | 
       throw new Error("Missing parameters for bulk status update.");
     }
 
-    const { data: updated, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from("Student")
       .update({ status })
-      .in("id", ids)
-      .select();
+      .in("id", ids);
 
     if (updateError) throw updateError;
 
