@@ -1,6 +1,6 @@
 # 🎓 NMCT EduTrack — Student Tracking Portal
 
-> **Native Medicare Charitable Trust** — A secure, role-based field officer portal for tracking the full educational lifecycle of tribal and non-tribal students in the Nilgiris District, with government welfare scheme (DBT) management, attendance monitoring, and dropout risk analytics.
+> **Native Medicare Charitable Trust** — A secure, role-based field officer portal for tracking the full educational lifecycle of tribal and non-tribal students in the Coimbatore District, with government welfare scheme (DBT) management, attendance monitoring, and dropout risk analytics.
 
 ---
 

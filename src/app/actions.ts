@@ -487,24 +487,24 @@ export async function importStudents(data: {
     dob: string;
     gender: "MALE" | "FEMALE" | "OTHER";
     tribe: string;
-    aadhaarLast4?: string;
+    aadhaarLast4?: string | null;
     guardianName: string;
-    guardianPhone?: string;
+    guardianPhone?: string | null;
     school: string;
     currentClass: string;
     district: string;
     village: string;
-    address?: string;
-    motherName?: string;
-    motherOccupation?: string;
-    fatherName?: string;
-    fatherOccupation?: string;
-    fatherAlive?: boolean;
-    fatherDifferentlyAbled?: boolean;
-    motherAlive?: boolean;
-    motherDifferentlyAbled?: boolean;
-    state?: string;
-    goesToTuition?: boolean;
+    address?: string | null;
+    motherName?: string | null;
+    motherOccupation?: string | null;
+    fatherName?: string | null;
+    fatherOccupation?: string | null;
+    fatherAlive?: boolean | null;
+    fatherDifferentlyAbled?: boolean | null;
+    motherAlive?: boolean | null;
+    motherDifferentlyAbled?: boolean | null;
+    state?: string | null;
+    goesToTuition?: boolean | null;
   }[];
   assignedOfficerId: string;
   initialAttendance?: {
@@ -521,9 +521,41 @@ export async function importStudents(data: {
       throw new Error("No student records provided");
     }
 
+    // Fetch all existing student names to prevent duplicates
+    const { data: existingStudents, error: fetchError } = await supabase
+      .from("Student")
+      .select("name");
+
+    if (fetchError) {
+      console.warn("Failed to fetch existing students for duplication check:", fetchError);
+    }
+
+    const existingNamesSet = new Set(
+      (existingStudents || []).map((s) => s.name.trim().toLowerCase())
+    );
+
+    // Keep track of names in the current batch to prevent duplicates inside the batch
+    const seenInBatch = new Set<string>();
+
+    const uniqueStudents = students.filter((s) => {
+      const cleanName = s.name.trim().toLowerCase();
+      if (existingNamesSet.has(cleanName)) {
+        return false; // Skip since it already exists in the database
+      }
+      if (seenInBatch.has(cleanName)) {
+        return false; // Skip since we already processed it in this batch
+      }
+      seenInBatch.add(cleanName);
+      return true;
+    });
+
+    if (uniqueStudents.length === 0) {
+      return { success: true, message: "All students already exist in the database." };
+    }
+
     // Insert all records in a batch
     const batchNow = new Date().toISOString();
-    const recordsToInsert = students.map((s) => {
+    const recordsToInsert = uniqueStudents.map((s) => {
       // Safe DOB fallback parsing
       let parsedDob = new Date("2015-01-01");
       if (s.dob) {
