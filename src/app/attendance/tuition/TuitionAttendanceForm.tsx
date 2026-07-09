@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { logTuitionAttendance } from "@/app/actions";
+import { logTuitionAttendance, bulkRemoveFromTuition } from "@/app/actions";
 
 interface StudentInfo {
   id: string;
@@ -19,12 +19,14 @@ interface AttendanceLog {
 interface TuitionAttendanceFormProps {
   students: StudentInfo[];
   recordedById: string;
+  officerName: string;
   initialLogs: AttendanceLog[];
 }
 
 export default function TuitionAttendanceForm({
   students,
   recordedById,
+  officerName,
   initialLogs,
 }: TuitionAttendanceFormProps) {
   // Format Date object to local YYYY-MM-DD
@@ -37,6 +39,7 @@ export default function TuitionAttendanceForm({
   const [selectedDate, setSelectedDate] = useState(getLocalDateString(new Date()));
   const [logs, setLogs] = useState<AttendanceLog[]>(initialLogs);
   const [attendance, setAttendance] = useState<{ [studentId: string]: "PRESENT" | "ABSENT" }>({});
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
@@ -191,12 +194,63 @@ export default function TuitionAttendanceForm({
         </div>
       )}
 
+      {selectedIds.length > 0 && (
+        <div className="p-4 bg-[#1E3A8A]/5 border border-[#1E3A8A]/20 rounded-xl flex flex-wrap items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2 duration-150 text-[#0F172A] text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-[#1E3A8A]">
+              {selectedIds.length} student{selectedIds.length !== 1 ? "s" : ""} selected
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedIds([])}
+              className="text-xs text-slate-500 hover:text-slate-700 underline ml-2 cursor-pointer"
+            >
+              Deselect all
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              if (window.confirm(`Are you sure you want to remove ${selectedIds.length} selected students from the Tuition Program?`)) {
+                setLoading(true);
+                const res = await bulkRemoveFromTuition(selectedIds, recordedById, officerName);
+                setLoading(false);
+                if (res.success) {
+                  alert("Students removed from tuition program successfully!");
+                  setSelectedIds([]);
+                  window.location.reload();
+                } else {
+                  alert(res.error || "Failed to remove students.");
+                }
+              }
+            }}
+            className="px-3.5 py-1.5 bg-[#BE123C] hover:bg-[#9F1239] text-white text-xs font-semibold rounded-lg shadow-xs transition cursor-pointer"
+          >
+            Remove Selected from Tuition
+          </button>
+        </div>
+      )}
+
       {/* Checklist list */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-sm">
             <thead>
               <tr className="bg-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
+                <th className="py-3.5 px-6 w-12">
+                  <input
+                    type="checkbox"
+                    checked={students.length > 0 && students.every(s => selectedIds.includes(s.id))}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedIds(students.map(s => s.id));
+                      } else {
+                        setSelectedIds([]);
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                  />
+                </th>
                 <th className="py-3.5 px-6">Name</th>
                 <th className="py-3.5 px-6">Village</th>
                 <th className="py-3.5 px-6">School</th>
@@ -207,7 +261,21 @@ export default function TuitionAttendanceForm({
               {students.map((student) => {
                 const status = attendance[student.id] || "PRESENT";
                 return (
-                  <tr key={student.id} className="hover:bg-slate-50/50 transition">
+                  <tr key={student.id} className="hover:bg-slate-50/50 transition duration-150">
+                    <td className="py-4 px-6">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(student.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedIds([...selectedIds, student.id]);
+                          } else {
+                            setSelectedIds(selectedIds.filter(id => id !== student.id));
+                          }
+                        }}
+                        className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer"
+                      />
+                    </td>
                     <td className="py-4 px-6 font-semibold text-slate-800">{student.name}</td>
                     <td className="py-4 px-6 text-slate-600">{student.village}</td>
                     <td className="py-4 px-6 text-slate-500 font-medium">{student.school}</td>

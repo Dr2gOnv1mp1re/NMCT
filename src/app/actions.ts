@@ -523,35 +523,46 @@ export async function importStudents(data: {
 
     // Insert all records in a batch
     const batchNow = new Date().toISOString();
-    const recordsToInsert = students.map((s) => ({
-      id: crypto.randomUUID(),
-      name: s.name,
-      dob: new Date(s.dob).toISOString(),
-      gender: s.gender,
-      tribe: s.tribe,
-      aadhaarLast4: s.aadhaarLast4 || null,
-      guardianName: s.guardianName,
-      guardianPhone: s.guardianPhone || null,
-      school: s.school,
-      currentClass: s.currentClass,
-      district: s.district,
-      village: s.village,
-      address: s.address || null,
-      motherName: s.motherName || null,
-      motherOccupation: s.motherOccupation || null,
-      fatherName: s.fatherName || null,
-      fatherOccupation: s.fatherOccupation || null,
-      fatherAlive: s.fatherAlive !== false,
-      fatherDifferentlyAbled: !!s.fatherDifferentlyAbled,
-      motherAlive: s.motherAlive !== false,
-      motherDifferentlyAbled: !!s.motherDifferentlyAbled,
-      state: s.state || "Tamil Nadu",
-      assignedOfficerId,
-      status: "ACTIVE",
-      goesToTuition: !!s.goesToTuition,
-      createdAt: batchNow,
-      updatedAt: batchNow,
-    }));
+    const recordsToInsert = students.map((s) => {
+      // Safe DOB fallback parsing
+      let parsedDob = new Date("2015-01-01");
+      if (s.dob) {
+        const d = new Date(s.dob);
+        if (!isNaN(d.getTime())) {
+          parsedDob = d;
+        }
+      }
+
+      return {
+        id: crypto.randomUUID(),
+        name: s.name,
+        dob: parsedDob.toISOString(),
+        gender: s.gender || "OTHER",
+        tribe: s.tribe || "Not Recorded",
+        aadhaarLast4: s.aadhaarLast4 || null,
+        guardianName: s.guardianName || "Not Recorded",
+        guardianPhone: s.guardianPhone || null,
+        school: s.school || "Not Recorded",
+        currentClass: s.currentClass || "Not Recorded",
+        district: s.district || "Coimbatore",
+        village: s.village || "Not Recorded",
+        address: s.address || null,
+        motherName: s.motherName || null,
+        motherOccupation: s.motherOccupation || null,
+        fatherName: s.fatherName || null,
+        fatherOccupation: s.fatherOccupation || null,
+        fatherAlive: s.fatherAlive !== false,
+        fatherDifferentlyAbled: !!s.fatherDifferentlyAbled,
+        motherAlive: s.motherAlive !== false,
+        motherDifferentlyAbled: !!s.motherDifferentlyAbled,
+        state: s.state || "Tamil Nadu",
+        assignedOfficerId,
+        status: "ACTIVE",
+        goesToTuition: !!s.goesToTuition,
+        createdAt: batchNow,
+        updatedAt: batchNow,
+      };
+    });
 
     const { data: createdStudents, error: importError } = await supabase
       .from("Student")
@@ -1290,6 +1301,46 @@ export async function bulkUpdateStudentStatus(ids: string[], status: "ACTIVE" | 
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Failed bulk update:", err);
+    return { success: false, error: err?.message || "Something went wrong" };
+  }
+}
+
+export async function bulkRemoveFromTuition(ids: string[], officerId: string, officerName: string) {
+  try {
+    if (!ids || ids.length === 0 || !officerId) {
+      throw new Error("Missing parameters for bulk tuition removal.");
+    }
+
+    const { error: updateError } = await supabase
+      .from("Student")
+      .update({ goesToTuition: false })
+      .in("id", ids);
+
+    if (updateError) throw updateError;
+
+    // Log in ActivityLog
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
+        userId: officerId,
+        action: `Removed ${ids.length} students from Tuition Program`,
+        metadata: {
+          count: ids.length,
+          updatedBy: officerName
+        }
+      });
+
+    if (logError) {
+      console.warn("Failed to log bulk tuition removal:", logError);
+    }
+
+    revalidatePath("/attendance/tuition");
+    revalidatePath("/dashboard");
+    revalidatePath("/students");
+    return { success: true };
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed bulk tuition removal:", err);
     return { success: false, error: err?.message || "Something went wrong" };
   }
 }

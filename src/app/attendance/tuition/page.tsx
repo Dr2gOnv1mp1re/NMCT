@@ -73,6 +73,7 @@ export default async function TuitionAttendancePage() {
           <TuitionAttendanceForm
             students={students}
             recordedById={officerId}
+            officerName={officerName}
             initialLogs={initialLogs}
           />
         </main>

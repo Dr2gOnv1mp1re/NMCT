@@ -292,7 +292,24 @@ export default function ImportStudentsModal({
           if (rawDob instanceof Date) {
             dobVal = rawDob.toISOString().split("T")[0];
           } else {
-            dobVal = String(rawDob || "").trim();
+            const rawStr = String(rawDob || "").trim();
+            const dmyMatch = rawStr.match(/^(\d{1,2})[\.\-\/](\d{1,2})[\.\-\/](\d{4})$/);
+            if (dmyMatch) {
+              const day = dmyMatch[1].padStart(2, "0");
+              const month = dmyMatch[2].padStart(2, "0");
+              const year = dmyMatch[3];
+              dobVal = `${year}-${month}-${day}`;
+            } else {
+              const ymdMatch = rawStr.match(/^(\d{4})[\.\-\/](\d{1,2})[\.\-\/](\d{1,2})$/);
+              if (ymdMatch) {
+                const year = ymdMatch[1];
+                const month = ymdMatch[2].padStart(2, "0");
+                const day = ymdMatch[3].padStart(2, "0");
+                dobVal = `${year}-${month}-${day}`;
+              } else {
+                dobVal = rawStr;
+              }
+            }
           }
 
           let genderVal = idxGender !== -1 ? String(rowCells[idxGender] || "").toUpperCase().trim() : "OTHER";
@@ -389,9 +406,9 @@ export default function ImportStudentsModal({
   };
 
   const handleConfirmImport = async () => {
-    const validStudents = parsedData.filter((s) => s.isValid);
-    if (validStudents.length === 0) {
-      setError("No valid student records to import.");
+    const studentsToImport = parsedData.filter((s) => s.name && s.name.trim() !== "");
+    if (studentsToImport.length === 0) {
+      setError("No student records to import.");
       return;
     }
 
@@ -400,7 +417,7 @@ export default function ImportStudentsModal({
 
     try {
       const result = await importStudents({
-        students: validStudents.map((s) => ({
+        students: studentsToImport.map((s) => ({
           name: s.name,
           dob: s.dob,
           gender: s.gender,
@@ -692,8 +709,8 @@ export default function ImportStudentsModal({
           {file && parsedData.length > 0 && (
             <button
               onClick={handleConfirmImport}
-              className="px-5 py-2.5 bg-[#1E3A8A] hover:bg-[#152e72] text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading || validCount === 0}
+              className="px-5 py-2.5 bg-[#1E3A8A] hover:bg-[#152e72] text-white rounded-lg text-xs font-semibold shadow-xs transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              disabled={loading || parsedData.filter(s => s.name && s.name.trim() !== "").length === 0}
             >
               {loading ? (
                 <>
@@ -701,7 +718,7 @@ export default function ImportStudentsModal({
                   Importing…
                 </>
               ) : (
-                `Import ${validCount} Valid Students`
+                `Import All ${parsedData.filter(s => s.name && s.name.trim() !== "").length} Students`
               )}
             </button>
           )}
