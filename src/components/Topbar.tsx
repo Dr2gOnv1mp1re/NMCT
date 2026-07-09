@@ -14,11 +14,15 @@ interface Notification {
 interface TopbarProps {
   officerName: string;
   placeholder?: string;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
 }
 
 export default function Topbar({
   officerName,
   placeholder = "Search students, villages, schemes...",
+  searchValue = "",
+  onSearchChange,
 }: TopbarProps) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -80,6 +84,8 @@ export default function Topbar({
             type="text"
             placeholder={placeholder}
             className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 bg-slate-50/50"
+            value={searchValue}
+            onChange={(e) => onSearchChange?.(e.target.value)}
           />
         </div>
       </div>

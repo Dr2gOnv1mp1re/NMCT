@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { clerkClient } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 
 export async function inviteFieldOfficer(formData: {
   name: string;
@@ -133,6 +135,16 @@ export async function addStudent(data: {
   goesToTuition?: boolean;
   photoBase64?: string;
   photoName?: string;
+  address?: string;
+  motherName?: string;
+  motherOccupation?: string;
+  fatherName?: string;
+  fatherOccupation?: string;
+  fatherAlive?: boolean;
+  fatherDifferentlyAbled?: boolean;
+  motherAlive?: boolean;
+  motherDifferentlyAbled?: boolean;
+  state?: string;
 }) {
   try {
     const {
@@ -151,6 +163,16 @@ export async function addStudent(data: {
       isTribal = true,
       goesToTuition = false,
       photoBase64,
+      address,
+      motherName,
+      motherOccupation,
+      fatherName,
+      fatherOccupation,
+      fatherAlive = true,
+      fatherDifferentlyAbled = false,
+      motherAlive = true,
+      motherDifferentlyAbled = false,
+      state = "Tamil Nadu",
     } = data;
 
     if (
@@ -228,6 +250,16 @@ export async function addStudent(data: {
         photoUrl,
         createdAt: now,
         updatedAt: now,
+        address: address || null,
+        motherName: motherName || null,
+        motherOccupation: motherOccupation || null,
+        fatherName: fatherName || null,
+        fatherOccupation: fatherOccupation || null,
+        fatherAlive,
+        fatherDifferentlyAbled,
+        motherAlive,
+        motherDifferentlyAbled,
+        state: state || null,
       })
       .select()
       .single();
@@ -263,6 +295,192 @@ export async function addStudent(data: {
   }
 }
 
+export async function updateStudent(id: string, data: {
+  name: string;
+  dob: string;
+  gender: "MALE" | "FEMALE" | "OTHER";
+  tribe: string;
+  aadhaarLast4?: string;
+  guardianName: string;
+  guardianPhone?: string;
+  school: string;
+  currentClass: string;
+  district: string;
+  village: string;
+  status: "ACTIVE" | "AT_RISK" | "DROPPED_OUT" | "MIGRATED" | "GRADUATED";
+  isTribal: boolean;
+  goesToTuition: boolean;
+  photoBase64?: string;
+  photoName?: string;
+  editorOfficerId: string;
+  address?: string;
+  motherName?: string;
+  motherOccupation?: string;
+  fatherName?: string;
+  fatherOccupation?: string;
+  fatherAlive?: boolean;
+  fatherDifferentlyAbled?: boolean;
+  motherAlive?: boolean;
+  motherDifferentlyAbled?: boolean;
+  state?: string;
+}) {
+  try {
+    const {
+      name,
+      dob,
+      gender,
+      tribe,
+      aadhaarLast4,
+      guardianName,
+      guardianPhone,
+      school,
+      currentClass,
+      district,
+      village,
+      status,
+      isTribal,
+      goesToTuition,
+      photoBase64,
+      editorOfficerId,
+      address,
+      motherName,
+      motherOccupation,
+      fatherName,
+      fatherOccupation,
+      fatherAlive = true,
+      fatherDifferentlyAbled = false,
+      motherAlive = true,
+      motherDifferentlyAbled = false,
+      state,
+    } = data;
+
+    if (
+      !id ||
+      !name ||
+      !dob ||
+      !gender ||
+      !tribe ||
+      !guardianName ||
+      !school ||
+      !currentClass ||
+      !district ||
+      !village ||
+      !editorOfficerId
+    ) {
+      throw new Error("Missing required fields");
+    }
+
+    // Fetch existing student details to potentially preserve or compare
+    const { data: existingStudent, error: fetchError } = await supabase
+      .from("Student")
+      .select("photoUrl")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    let photoUrl = existingStudent?.photoUrl || null;
+
+    if (photoBase64) {
+      const matches = photoBase64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const fileType = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+        const ext = fileType.split('/')[1] || 'jpg';
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${ext}`;
+
+        try {
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from("student-photos")
+            .upload(fileName, buffer, {
+              contentType: fileType,
+              duplex: 'half',
+              upsert: true
+            } as any);
+
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage
+              .from("student-photos")
+              .getPublicUrl(fileName);
+            photoUrl = urlData.publicUrl;
+          } else {
+            console.warn("Supabase storage upload failed, falling back to base64 database storage:", uploadError);
+            photoUrl = photoBase64;
+          }
+        } catch (storageErr) {
+          console.warn("Supabase storage upload exception, falling back to base64 database storage:", storageErr);
+          photoUrl = photoBase64;
+        }
+      }
+    }
+
+    const now = new Date().toISOString();
+    const { data: updatedStudent, error: updateError } = await supabase
+      .from("Student")
+      .update({
+        name,
+        dob: new Date(dob).toISOString(),
+        gender,
+        tribe,
+        aadhaarLast4: aadhaarLast4 || null,
+        guardianName,
+        guardianPhone: guardianPhone || null,
+        school,
+        currentClass,
+        district,
+        village,
+        status,
+        isTribal,
+        goesToTuition,
+        photoUrl,
+        updatedAt: now,
+        address: address || null,
+        motherName: motherName || null,
+        motherOccupation: motherOccupation || null,
+        fatherName: fatherName || null,
+        fatherOccupation: fatherOccupation || null,
+        fatherAlive,
+        fatherDifferentlyAbled,
+        motherAlive,
+        motherDifferentlyAbled,
+        state: state || null,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Log update activity
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
+        userId: editorOfficerId,
+        action: `Updated student details for ${name}`,
+        studentId: id,
+        metadata: {
+          school,
+          currentClass,
+          status,
+          isTribal,
+          goesToTuition,
+        },
+      });
+
+    if (logError) throw logError;
+
+    revalidatePath("/dashboard");
+    revalidatePath("/students");
+    revalidatePath(`/students/${id}`);
+    return { success: true, student: updatedStudent };
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed to update student:", err);
+    return { success: false, error: err?.message || "Something went wrong" };
+  }
+}
+
 export async function importStudents(data: {
   students: {
     name: string;
@@ -276,6 +494,16 @@ export async function importStudents(data: {
     currentClass: string;
     district: string;
     village: string;
+    address?: string;
+    motherName?: string;
+    motherOccupation?: string;
+    fatherName?: string;
+    fatherOccupation?: string;
+    fatherAlive?: boolean;
+    fatherDifferentlyAbled?: boolean;
+    motherAlive?: boolean;
+    motherDifferentlyAbled?: boolean;
+    state?: string;
   }[];
   assignedOfficerId: string;
 }) {
@@ -301,6 +529,16 @@ export async function importStudents(data: {
       currentClass: s.currentClass,
       district: s.district,
       village: s.village,
+      address: s.address || null,
+      motherName: s.motherName || null,
+      motherOccupation: s.motherOccupation || null,
+      fatherName: s.fatherName || null,
+      fatherOccupation: s.fatherOccupation || null,
+      fatherAlive: s.fatherAlive !== false,
+      fatherDifferentlyAbled: !!s.fatherDifferentlyAbled,
+      motherAlive: s.motherAlive !== false,
+      motherDifferentlyAbled: !!s.motherDifferentlyAbled,
+      state: s.state || "Tamil Nadu",
       assignedOfficerId,
       status: "ACTIVE",
       createdAt: batchNow,
@@ -824,6 +1062,203 @@ export async function logBulkAttendance(data: {
   } catch (error: unknown) {
     const err = error as Error;
     console.error("Failed to log bulk attendance:", err);
+    return { success: false, error: err?.message || "Something went wrong" };
+  }
+}
+
+export async function deleteStudent(id: string, officerId: string, officerName: string) {
+  try {
+    if (!id || !officerId) {
+      throw new Error("Missing required parameters for deletion.");
+    }
+
+    // 1. Fetch student details first
+    const { data: student, error: fetchError } = await supabase
+      .from("Student")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+    if (!student) {
+      throw new Error("Student not found.");
+    }
+
+    // 2. Local Backup: Append details to deleted_students.json
+    const backupPath = path.join(process.cwd(), "deleted_students.json");
+
+    let deletedRecords: any[] = [];
+    if (fs.existsSync(backupPath)) {
+      try {
+        const fileContent = fs.readFileSync(backupPath, "utf-8");
+        deletedRecords = JSON.parse(fileContent);
+      } catch (e) {
+        console.warn("Failed to parse deleted_students.json, rewriting:", e);
+      }
+    }
+
+    // Append the deleted record with metadata
+    deletedRecords.push({
+      deletedAt: new Date().toISOString(),
+      deletedBy: {
+        id: officerId,
+        name: officerName
+      },
+      record: student
+    });
+
+    fs.writeFileSync(backupPath, JSON.stringify(deletedRecords, null, 2), "utf-8");
+    console.log(`Deleted student backup written to ${backupPath}`);
+
+    // 3. Delete student from Supabase
+    const { error: deleteError } = await supabase
+      .from("Student")
+      .delete()
+      .eq("id", id);
+
+    if (deleteError) throw deleteError;
+
+    // 4. Log the action in ActivityLog
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
+        userId: officerId,
+        action: `Deleted student ${student.name}`,
+        metadata: {
+          studentId: id,
+          studentName: student.name,
+          deletedBy: officerName
+        }
+      });
+
+    if (logError) {
+      console.warn("Failed to insert ActivityLog for deletion:", logError);
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/students");
+    return { success: true };
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed to delete student:", err);
+    return { success: false, error: err?.message || "Something went wrong" };
+  }
+}
+
+export async function bulkDeleteStudents(ids: string[], officerId: string, officerName: string) {
+  try {
+    if (!ids || ids.length === 0 || !officerId) {
+      throw new Error("Missing parameters for bulk deletion.");
+    }
+
+    // 1. Fetch details for all students to back up
+    const { data: students, error: fetchError } = await supabase
+      .from("Student")
+      .select("*")
+      .in("id", ids);
+
+    if (fetchError) throw fetchError;
+    if (!students || students.length === 0) {
+      throw new Error("No students found to delete.");
+    }
+
+    // 2. Backup to deleted_students.json
+    const backupPath = path.join(process.cwd(), "deleted_students.json");
+    let deletedRecords: any[] = [];
+    if (fs.existsSync(backupPath)) {
+      try {
+        const fileContent = fs.readFileSync(backupPath, "utf-8");
+        deletedRecords = JSON.parse(fileContent);
+      } catch (e) {
+        console.warn("Failed to parse deleted_students.json:", e);
+      }
+    }
+
+    students.forEach((student) => {
+      deletedRecords.push({
+        deletedAt: new Date().toISOString(),
+        deletedBy: {
+          id: officerId,
+          name: officerName
+        },
+        record: student
+      });
+    });
+
+    fs.writeFileSync(backupPath, JSON.stringify(deletedRecords, null, 2), "utf-8");
+
+    // 3. Delete from Supabase
+    const { error: deleteError } = await supabase
+      .from("Student")
+      .delete()
+      .in("id", ids);
+
+    if (deleteError) throw deleteError;
+
+    // 4. Log in ActivityLog
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
+        userId: officerId,
+        action: `Bulk deleted ${students.length} students`,
+        metadata: {
+          count: students.length,
+          studentNames: students.map((s) => s.name),
+          deletedBy: officerName
+        }
+      });
+
+    if (logError) {
+      console.warn("Failed to log bulk deletion:", logError);
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/students");
+    return { success: true };
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed bulk deletion:", err);
+    return { success: false, error: err?.message || "Something went wrong" };
+  }
+}
+
+export async function bulkUpdateStudentStatus(ids: string[], status: "ACTIVE" | "AT_RISK" | "DROPPED_OUT" | "MIGRATED" | "GRADUATED", officerId: string, officerName: string) {
+  try {
+    if (!ids || ids.length === 0 || !status || !officerId) {
+      throw new Error("Missing parameters for bulk status update.");
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from("Student")
+      .update({ status })
+      .in("id", ids)
+      .select();
+
+    if (updateError) throw updateError;
+
+    // Log in ActivityLog
+    const { error: logError } = await supabase
+      .from("ActivityLog")
+      .insert({
+        userId: officerId,
+        action: `Bulk updated status of ${ids.length} students to ${status}`,
+        metadata: {
+          count: ids.length,
+          status,
+          updatedBy: officerName
+        }
+      });
+
+    if (logError) {
+      console.warn("Failed to log bulk update:", logError);
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/students");
+    return { success: true };
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Failed bulk update:", err);
     return { success: false, error: err?.message || "Something went wrong" };
   }
 }

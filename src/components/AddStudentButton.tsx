@@ -25,15 +25,27 @@ export default function AddStudentButton({
   const [school, setSchool] = useState("");
   const [currentClass, setCurrentClass] = useState("");
   const [village, setVillage] = useState("");
-  const [district] = useState(defaultDistrict || "Nilgiris");
+  const [district, setDistrict] = useState(defaultDistrict || "Nilgiris");
   const [guardianName, setGuardianName] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
+  const [state, setState] = useState("Tamil Nadu");
 
   // New States
   const [isTribal, setIsTribal] = useState(true);
   const [goesToTuition, setGoesToTuition] = useState(false);
   const [photoBase64, setPhotoBase64] = useState("");
   const [photoName, setPhotoName] = useState("");
+
+  // Extended fields
+  const [address, setAddress] = useState("");
+  const [motherName, setMotherName] = useState("");
+  const [motherOccupation, setMotherOccupation] = useState("");
+  const [fatherName, setFatherName] = useState("");
+  const [fatherOccupation, setFatherOccupation] = useState("");
+  const [fatherAlive, setFatherAlive] = useState(true);
+  const [fatherDifferentlyAbled, setFatherDifferentlyAbled] = useState(false);
+  const [motherAlive, setMotherAlive] = useState(true);
+  const [motherDifferentlyAbled, setMotherDifferentlyAbled] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -54,6 +66,16 @@ export default function AddStudentButton({
     setGoesToTuition(false);
     setPhotoBase64("");
     setPhotoName("");
+    setAddress("");
+    setMotherName("");
+    setMotherOccupation("");
+    setFatherName("");
+    setFatherOccupation("");
+    setFatherAlive(true);
+    setFatherDifferentlyAbled(false);
+    setMotherAlive(true);
+    setMotherDifferentlyAbled(false);
+    setState("Tamil Nadu");
     setError("");
     setSuccess(false);
   };
@@ -118,6 +140,16 @@ export default function AddStudentButton({
         goesToTuition,
         photoBase64: photoBase64 || undefined,
         photoName: photoName || undefined,
+        address: address.trim() || undefined,
+        motherName: motherName.trim() || undefined,
+        motherOccupation: motherOccupation.trim() || undefined,
+        fatherName: fatherName.trim() || undefined,
+        fatherOccupation: fatherOccupation.trim() || undefined,
+        fatherAlive,
+        fatherDifferentlyAbled,
+        motherAlive,
+        motherDifferentlyAbled,
+        state: state.trim() || undefined,
       });
 
       if (result.success) {
@@ -159,7 +191,7 @@ export default function AddStudentButton({
               <div>
                 <h3 className="text-lg font-bold font-serif">Add Student to Registry</h3>
                 <p className="text-xs text-emerald-200 mt-0.5">
-                  Register new tribal student lifecycle metrics
+                  Enter the details below to register a new student.
                 </p>
               </div>
               <button
@@ -363,12 +395,12 @@ export default function AddStudentButton({
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Village *
+                      Village / Town / Street / Area (Residential Colony) *
                     </label>
                     <input
                       type="text"
                       className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
-                      placeholder="e.g. Anaikatti"
+                      placeholder="e.g. Anaikatti or Residential Colony"
                       value={village}
                       onChange={(e) => setVillage(e.target.value)}
                       required
@@ -376,21 +408,172 @@ export default function AddStudentButton({
                     />
                   </div>
 
-                  <div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        District *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                        placeholder="e.g. Nilgiris"
+                        value={district}
+                        onChange={(e) => setDistrict(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        State *
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                        placeholder="e.g. Tamil Nadu"
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2">
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      District *
+                      Address
                     </label>
-                    <input
-                      type="text"
-                      className="w-full p-2.5 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-500 cursor-not-allowed focus:outline-none"
-                      value={district}
-                      disabled={true}
+                    <textarea
+                      rows={2}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                      placeholder="Enter address details..."
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      disabled={loading}
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Grid 3: Guardian Details */}
+              {/* Grid 3: Parent & Family Details */}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] border-b border-slate-100 pb-1">
+                  Parent Details & Relationship Status
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {"Father's Name"}
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                      placeholder="Father's full name"
+                      value={fatherName}
+                      onChange={(e) => setFatherName(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {"Father's Occupation"}
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                      placeholder="Father's occupation"
+                      value={fatherOccupation}
+                      onChange={(e) => setFatherOccupation(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {"Mother's Name"}
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                      placeholder="Mother's full name"
+                      value={motherName}
+                      onChange={(e) => setMotherName(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      {"Mother's Occupation"}
+                    </label>
+                    <input
+                      type="text"
+                      className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
+                      placeholder="Mother's occupation"
+                      value={motherOccupation}
+                      onChange={(e) => setMotherOccupation(e.target.value)}
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-[#4A6741] uppercase tracking-wider">Father status</p>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={fatherAlive}
+                            onChange={(e) => setFatherAlive(e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 border-slate-300 rounded-sm cursor-pointer"
+                            disabled={loading}
+                          />
+                          Father is Alive
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={fatherDifferentlyAbled}
+                            onChange={(e) => setFatherDifferentlyAbled(e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 border-slate-300 rounded-sm cursor-pointer"
+                            disabled={loading}
+                          />
+                          Differently Abled
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-[#4A6741] uppercase tracking-wider">Mother status</p>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={motherAlive}
+                            onChange={(e) => setMotherAlive(e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 border-slate-300 rounded-sm cursor-pointer"
+                            disabled={loading}
+                          />
+                          Mother is Alive
+                        </label>
+                        <label className="flex items-center gap-1.5 text-xs text-slate-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={motherDifferentlyAbled}
+                            onChange={(e) => setMotherDifferentlyAbled(e.target.checked)}
+                            className="w-4 h-4 text-emerald-600 border-slate-300 rounded-sm cursor-pointer"
+                            disabled={loading}
+                          />
+                          Differently Abled
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Grid 4: Guardian Details */}
               <div className="space-y-4">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-[#4A6741] border-b border-slate-100 pb-1">
                   Guardian Contact

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { toggleTuitionEnrollment } from "@/app/actions";
 import { UserButton, Show } from "@clerk/nextjs";
+import EditStudentButtonWrapper from "./EditStudentButtonWrapper";
 
 export const dynamic = "force-dynamic";
 
@@ -134,39 +135,48 @@ export default async function StudentProfilePage({
             </div>
 
             {/* Profile Info */}
-            <div className="flex-1 space-y-4">
-              <div>
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
-                  <h2 className="text-3xl font-bold tracking-tight text-[#0B1329]">
-                    {student.name}
-                  </h2>
-                  <span
-                    className={`text-xs font-bold py-1 px-3 rounded-full ${
-                      student.status === "ACTIVE"
-                        ? "bg-emerald-50 text-emerald-700"
-                        : student.status === "AT_RISK"
-                        ? "bg-amber-50 text-amber-700"
-                        : student.status === "DROPPED_OUT"
-                        ? "bg-rose-50 text-rose-700"
-                        : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {student.status}
-                  </span>
-                  <span
-                    className={`text-xs font-bold py-1 px-3 rounded-full ${
-                      student.isTribal
-                        ? "bg-teal-50 text-teal-700"
-                        : "bg-purple-50 text-purple-700"
-                    }`}
-                  >
-                    {student.isTribal ? "Tribal Student" : "Non-Tribal Student"}
-                  </span>
+            <div className="flex-1 space-y-4 w-full">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="text-center md:text-left">
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                    <h2 className="text-3xl font-bold tracking-tight text-[#0B1329]">
+                      {student.name}
+                    </h2>
+                    <span
+                      className={`text-xs font-bold py-1 px-3 rounded-full ${
+                        student.status === "ACTIVE"
+                          ? "bg-emerald-50 text-emerald-700"
+                          : student.status === "AT_RISK"
+                          ? "bg-amber-50 text-amber-700"
+                          : student.status === "DROPPED_OUT"
+                          ? "bg-rose-50 text-rose-700"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {student.status}
+                    </span>
+                    <span
+                      className={`text-xs font-bold py-1 px-3 rounded-full ${
+                        student.isTribal
+                          ? "bg-teal-50 text-teal-700"
+                          : "bg-purple-50 text-purple-700"
+                      }`}
+                    >
+                      {student.isTribal ? "Tribal Student" : "Non-Tribal Student"}
+                    </span>
+                  </div>
+                  <p className="text-slate-500 font-medium mt-1">
+                    {student.tribe} · {getAge(student.dob)} years old (DOB:{" "}
+                    {new Date(student.dob).toLocaleDateString()})
+                  </p>
                 </div>
-                <p className="text-slate-500 font-medium mt-1">
-                  {student.tribe} · {getAge(student.dob)} years old (DOB:{" "}
-                  {new Date(student.dob).toLocaleDateString()})
-                </p>
+                <div className="flex-shrink-0 self-center sm:self-start">
+                  <EditStudentButtonWrapper
+                    student={student}
+                    editorOfficerId={officerDbUser?.id || "demo_officer_id"}
+                    editorOfficerName={officerName}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pt-2 border-t border-slate-100">
@@ -238,6 +248,92 @@ export default async function StudentProfilePage({
                     <span className="text-sm font-mono text-slate-700">
                       {student.aadhaarLast4 || "Not Provided"}
                     </span>
+                  </div>
+                  <div>
+                    <span className="block text-[10px] text-slate-400 font-bold uppercase">
+                      Address
+                    </span>
+                    <span className="text-sm text-slate-700 leading-relaxed block whitespace-pre-wrap">
+                      {student.address || "No Address Provided"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Parent & Family Details */}
+              <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs text-left space-y-4">
+                <h3 className="font-bold text-base text-[#0B1329] border-b border-slate-100 pb-3 flex items-center gap-2">
+                  <span>👪</span> Parent & Family Details
+                </h3>
+                <div className="space-y-4 divide-y divide-slate-100">
+                  {/* Father Details */}
+                  <div className="space-y-2 pt-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        {"Father's Details"}
+                      </span>
+                      <div className="flex gap-1">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                          student.fatherAlive !== false
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-rose-50 text-rose-700"
+                        }`}>
+                          {student.fatherAlive !== false ? "Alive" : "Deceased"}
+                        </span>
+                        {student.fatherDifferentlyAbled && (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                            Differently Abled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400">Name</p>
+                      <p className="text-xs font-semibold text-slate-700">
+                        {student.fatherName || "Not Recorded"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400">Occupation</p>
+                      <p className="text-xs font-medium text-slate-600">
+                        {student.fatherOccupation || "Not Recorded"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Mother Details */}
+                  <div className="space-y-2 pt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        {"Mother's Details"}
+                      </span>
+                      <div className="flex gap-1">
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                          student.motherAlive !== false
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-rose-50 text-rose-700"
+                        }`}>
+                          {student.motherAlive !== false ? "Alive" : "Deceased"}
+                        </span>
+                        {student.motherDifferentlyAbled && (
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+                            Differently Abled
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400">Name</p>
+                      <p className="text-xs font-semibold text-slate-700">
+                        {student.motherName || "Not Recorded"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400">Occupation</p>
+                      <p className="text-xs font-medium text-slate-600">
+                        {student.motherOccupation || "Not Recorded"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

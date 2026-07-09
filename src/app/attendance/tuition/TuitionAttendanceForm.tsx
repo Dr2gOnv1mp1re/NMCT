@@ -56,7 +56,15 @@ export default function TuitionAttendanceForm({
     setError("");
   }, [selectedDate, logs, students]);
 
+  const isSavedPresent = (studentId: string) => {
+    return logs.some((l) => {
+      const logDateStr = getLocalDateString(new Date(l.date));
+      return l.studentId === studentId && logDateStr === selectedDate && l.status === "PRESENT";
+    });
+  };
+
   const handleToggle = (studentId: string) => {
+    if (isSavedPresent(studentId)) return;
     setAttendance((prev) => ({
       ...prev,
       [studentId]: prev[studentId] === "PRESENT" ? "ABSENT" : "PRESENT",
@@ -64,9 +72,11 @@ export default function TuitionAttendanceForm({
   };
 
   const setAllStatus = (status: "PRESENT" | "ABSENT") => {
-    const updated: { [id: string]: "PRESENT" | "ABSENT" } = {};
+    const updated: { [id: string]: "PRESENT" | "ABSENT" } = { ...attendance };
     students.forEach((s) => {
-      updated[s.id] = status;
+      if (!isSavedPresent(s.id)) {
+        updated[s.id] = status;
+      }
     });
     setAttendance(updated);
   };
@@ -205,12 +215,13 @@ export default function TuitionAttendanceForm({
                       <button
                         type="button"
                         onClick={() => handleToggle(student.id)}
-                        disabled={loading}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold shadow-xs transition w-28 ${
+                        disabled={loading || isSavedPresent(student.id)}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold shadow-xs transition w-28 disabled:opacity-60 disabled:cursor-not-allowed ${
                           status === "PRESENT"
-                            ? "bg-emerald-500 text-white hover:bg-emerald-600"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                             : "bg-rose-500 text-white hover:bg-rose-600"
                         }`}
+                        title={isSavedPresent(student.id) ? "Saved present records cannot be changed" : ""}
                       >
                         {status}
                       </button>
