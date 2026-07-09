@@ -19,7 +19,7 @@ export default async function DBTPage() {
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
-  const officerDistrict = officerDbUser?.district || "Nilgiris";
+  const officerDistrict = officerDbUser?.district || "Coimbatore";
 
   // Fetch all DBT Records in the system, joined with student and assigned officer
   const { data: dbtRecordsData } = await supabase

@@ -37,7 +37,7 @@ export default async function DashboardPage() {
         name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Field Officer",
         email: email,
         role: "FIELD_OFFICER",
-        district: "Nilgiris",
+        district: "Coimbatore",
         isActive: true,
       })
       .select()
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
   // 4. Default mock user if not logged in and no DB user exists
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
-  const officerDistrict = officerDbUser?.district || "Nilgiris";
+  const officerDistrict = officerDbUser?.district || "Coimbatore";
 
   // 5. Fetch assigned students including dbtRecords and riskScore
   const { data: studentsData } = await supabase

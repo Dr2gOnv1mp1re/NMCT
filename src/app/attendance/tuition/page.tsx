@@ -19,7 +19,7 @@ export default async function TuitionAttendancePage() {
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
-  const officerDistrict = officerDbUser?.district || "Nilgiris";
+  const officerDistrict = officerDbUser?.district || "Coimbatore";
 
   // Fetch tuition going students assigned to this officer (or all if admin)
   let query = supabase

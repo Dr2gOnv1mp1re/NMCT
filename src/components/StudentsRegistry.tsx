@@ -61,6 +61,7 @@ export default function StudentsRegistry({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [tribeCategory, setTribeCategory] = useState("All categories");
+  const [selectedVillage, setSelectedVillage] = useState("All villages");
   const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -68,7 +69,7 @@ export default function StudentsRegistry({
   // Reset to first page when search filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, level, status, tribeCategory]);
+  }, [search, level, status, tribeCategory, selectedVillage]);
 
   // Filter students based on search, level standard range, and status
   const filteredStudents = students.filter((s) => {
@@ -153,7 +154,12 @@ export default function StudentsRegistry({
       (tribeCategory === "Tribal" && s.isTribal) ||
       (tribeCategory === "Non-Tribal" && !s.isTribal);
 
-    return matchesSearch && matchesLevel && matchesStatus && matchesTribeCategory;
+    // 5. Village match
+    const matchesVillage =
+      selectedVillage === "All villages" ||
+      (s.village || "").toLowerCase().trim().includes(selectedVillage.toLowerCase().trim());
+
+    return matchesSearch && matchesLevel && matchesStatus && matchesTribeCategory && matchesVillage;
   });
 
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -399,19 +405,43 @@ export default function StudentsRegistry({
               </select>
             </div>
 
-            {/* Filter Tribe Category Dropdown */}
-            <div className="w-48 relative">
-              <select
-                className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-sky-500 bg-white cursor-pointer"
-                value={tribeCategory}
-                onChange={(e) => setTribeCategory(e.target.value)}
-              >
-                <option value="All categories">All categories</option>
-                <option value="Tribal">Tribal Students</option>
-                <option value="Non-Tribal">Non-Tribal Students</option>
-              </select>
-            </div>
-          </div>
+             {/* Filter Tribe Category Dropdown */}
+             <div className="w-48 relative">
+               <select
+                 className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-sky-500 bg-white cursor-pointer"
+                 value={tribeCategory}
+                 onChange={(e) => setTribeCategory(e.target.value)}
+               >
+                 <option value="All categories">All categories</option>
+                 <option value="Tribal">Tribal Students</option>
+                 <option value="Non-Tribal">Non-Tribal Students</option>
+               </select>
+             </div>
+
+             {/* Filter Village Dropdown */}
+             <div className="w-48 relative">
+               <select
+                 className="w-full p-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-sky-500 bg-white cursor-pointer"
+                 value={selectedVillage}
+                 onChange={(e) => setSelectedVillage(e.target.value)}
+               >
+                 <option value="All villages">All villages</option>
+                 <option value="Korapathy">Korapathy</option>
+                 <option value="Gethaikadu">Gethaikadu</option>
+                 <option value="Maanaar">Maanar</option>
+                 <option value="Colony Pudur">Colony Pudur</option>
+                 <option value="Gopanari">Gopanari</option>
+                 <option value="Kaliyur">Kaliyur</option>
+                 <option value="Alangandi">Alangandi</option>
+                 <option value="Seenguli">Seenguli</option>
+                 <option value="Senkuttai">Senkuttai</option>
+                 <option value="Alamaramedu">Alamaramedu</option>
+                 <option value="Pappampatti">Pappampatti</option>
+                 <option value="Edayarpalayam">Edayarpalayam</option>
+                 <option value="Kallapalayam">Kallapalayam</option>
+               </select>
+             </div>
+           </div>
 
           {/* Bulk Action Bar */}
           {selectedIds.length > 0 && (
@@ -576,7 +606,7 @@ export default function StudentsRegistry({
                                 "pudur", "kallur", "mattathukadu", "mattathukkadu"
                               ];
                               if (nilgirisVillages.some(v => lowerVillage.includes(v))) {
-                                resolvedDistrict = "Nilgiris";
+                                resolvedDistrict = "Coimbatore";
                               }
                             }
                           }

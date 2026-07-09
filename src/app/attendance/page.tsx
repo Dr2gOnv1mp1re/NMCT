@@ -19,7 +19,7 @@ export default async function AttendancePage() {
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
-  const officerDistrict = officerDbUser?.district || "Nilgiris";
+  const officerDistrict = officerDbUser?.district || "Coimbatore";
 
   // Fetch assigned students with attendance records (or all if admin)
   let query = supabase.from("Student").select("*, attendanceRecords:AttendanceRecord(*)");

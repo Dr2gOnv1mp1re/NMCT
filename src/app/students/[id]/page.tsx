@@ -30,7 +30,7 @@ export default async function StudentProfilePage({
     .maybeSingle();
 
   const officerName = officerDbUser?.name || "Demo Officer";
-  const officerDistrict = officerDbUser?.district || "Nilgiris";
+  const officerDistrict = officerDbUser?.district || "Coimbatore";
 
   // Fetch student details with relations
   const { data: studentData } = await supabase

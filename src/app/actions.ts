@@ -504,11 +504,18 @@ export async function importStudents(data: {
     motherAlive?: boolean;
     motherDifferentlyAbled?: boolean;
     state?: string;
+    goesToTuition?: boolean;
   }[];
   assignedOfficerId: string;
+  initialAttendance?: {
+    month: number;
+    year: number;
+    daysPresent: number;
+    daysTotal: number;
+  };
 }) {
   try {
-    const { students, assignedOfficerId } = data;
+    const { students, assignedOfficerId, initialAttendance } = data;
 
     if (!students || students.length === 0 || !assignedOfficerId) {
       throw new Error("No student records provided");
@@ -541,6 +548,7 @@ export async function importStudents(data: {
       state: s.state || "Tamil Nadu",
       assignedOfficerId,
       status: "ACTIVE",
+      goesToTuition: !!s.goesToTuition,
       createdAt: batchNow,
       updatedAt: batchNow,
     }));
@@ -551,6 +559,30 @@ export async function importStudents(data: {
       .select();
 
     if (importError) throw importError;
+
+    // Batch insert attendance records if initialAttendance is specified
+    if (initialAttendance && createdStudents && createdStudents.length > 0) {
+      const percentage = initialAttendance.daysTotal > 0 ? (initialAttendance.daysPresent / initialAttendance.daysTotal) * 100 : 0;
+      const attendanceRecordsToInsert = createdStudents.map((student) => ({
+        id: crypto.randomUUID(),
+        studentId: student.id,
+        month: initialAttendance.month,
+        year: initialAttendance.year,
+        daysPresent: initialAttendance.daysPresent,
+        daysTotal: initialAttendance.daysTotal,
+        percentage,
+        recordedById: assignedOfficerId,
+        createdAt: batchNow,
+      }));
+
+      const { error: attendanceError } = await supabase
+        .from("AttendanceRecord")
+        .insert(attendanceRecordsToInsert);
+
+      if (attendanceError) {
+        console.error("Failed to insert initial attendance records:", attendanceError);
+      }
+    }
 
     // Log the batch import activity in the audit trail
     const { error: logError } = await supabase

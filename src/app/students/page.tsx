@@ -36,7 +36,7 @@ export default async function StudentsPage() {
         name: `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Field Officer",
         email: email,
         role: "FIELD_OFFICER",
-        district: "Nilgiris",
+        district: "Coimbatore",
         isActive: true,
       })
       .select()
@@ -46,7 +46,7 @@ export default async function StudentsPage() {
 
   const officerId = officerDbUser?.id || "demo_officer_id";
   const officerName = officerDbUser?.name || "Demo Officer";
-  const officerDistrict = officerDbUser?.district || "Nilgiris";
+  const officerDistrict = officerDbUser?.district || "Coimbatore";
 
   // 4. Fetch assigned students (or all if admin)
   let query = supabase.from("Student").select("*");

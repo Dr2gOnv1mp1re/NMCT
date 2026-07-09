@@ -48,6 +48,14 @@ export default function ImportStudentsModal({
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Tuition Enrollment and Monthly Attendance State
+  const [goesToTuition, setGoesToTuition] = useState(false);
+  const [logInitialAttendance, setLogInitialAttendance] = useState(false);
+  const [attendanceMonth, setAttendanceMonth] = useState(new Date().getMonth() + 1);
+  const [attendanceYear, setAttendanceYear] = useState(new Date().getFullYear());
+  const [attendanceDaysPresent, setAttendanceDaysPresent] = useState(20);
+  const [attendanceDaysTotal, setAttendanceDaysTotal] = useState(22);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError("");
     const selectedFile = e.target.files?.[0];
@@ -73,6 +81,18 @@ export default function ImportStudentsModal({
         const workbook = XLSX.read(data, { type: "array", cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
+        
+        let defaultVillageFromSheet = "";
+        if (sheetName && !/^sheet\d+$/i.test(sheetName.trim())) {
+          const rawName = sheetName.trim();
+          defaultVillageFromSheet = rawName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+        }
+
+        if (sheetName && sheetName.toLowerCase().trim() === "sheet2") {
+          setGoesToTuition(true);
+        } else {
+          setGoesToTuition(false);
+        }
         
         // Parse raw rows as Array of Arrays
         /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
@@ -241,11 +261,26 @@ export default function ImportStudentsModal({
         }
 
         const studentsList: ParsedStudent[] = [];
+        let currentRunningVillage = defaultVillageFromSheet;
 
         // Parse data rows starting after header row
         for (let i = headerRowIndex + 1; i < rows.length; i++) {
           const rowCells = rows[i];
-          if (!rowCells || rowCells.length < 3) continue; // skip blank/invalid rows
+          if (!rowCells) continue;
+
+          // Check if this row is a section break/village header
+          const nonSecCells = rowCells.filter(cell => cell !== undefined && cell !== null && String(cell).trim() !== "");
+          if (nonSecCells.length === 1) {
+            const cellVal = String(nonSecCells[0]).trim();
+            const match = cellVal.match(/^\d+\s*\.\s*([A-Za-z\s\-]+)$/);
+            if (match) {
+              const rawName = match[1].trim();
+              currentRunningVillage = rawName.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+              continue; // Skip processing this row as a student record
+            }
+          }
+
+          if (rowCells.length < 3) continue; // skip blank/invalid rows
 
           const rowErrors: string[] = [];
 
@@ -267,7 +302,14 @@ export default function ImportStudentsModal({
           const guardianPhoneVal = idxGuardianPhone !== -1 ? String(rowCells[idxGuardianPhone] || "").trim() : "";
           const schoolVal = String(rowCells[idxSchool] || "").trim();
           const classVal = String(rowCells[idxClass] || "").trim();
-          const villageVal = idxVillage !== -1 ? String(rowCells[idxVillage] || "").trim() : "Not Recorded";
+          
+          let villageVal = idxVillage !== -1 ? String(rowCells[idxVillage] || "").trim() : "";
+          if ((!villageVal || villageVal === "Not Recorded") && currentRunningVillage) {
+            villageVal = currentRunningVillage;
+          }
+          if (!villageVal) {
+            villageVal = "Not Recorded";
+          }
           
           const addressVal = idxAddress !== -1 ? String(rowCells[idxAddress] || "").trim() : "";
           const motherNameVal = idxMotherName !== -1 ? String(rowCells[idxMotherName] || "").trim() : "";
@@ -380,8 +422,15 @@ export default function ImportStudentsModal({
           motherAlive: s.motherAlive,
           motherDifferentlyAbled: s.motherDifferentlyAbled,
           state: s.state,
+          goesToTuition: goesToTuition,
         })),
         assignedOfficerId,
+        initialAttendance: logInitialAttendance ? {
+          month: attendanceMonth,
+          year: attendanceYear,
+          daysPresent: attendanceDaysPresent,
+          daysTotal: attendanceDaysTotal,
+        } : undefined,
       });
 
       if (result.success) {
@@ -532,6 +581,98 @@ export default function ImportStudentsModal({
                     ))}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Tuition Enrollment & Initial Attendance Options */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-4 text-xs mt-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="goesToTuition"
+                    checked={goesToTuition}
+                    onChange={(e) => setGoesToTuition(e.target.checked)}
+                    className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 cursor-pointer"
+                  />
+                  <label htmlFor="goesToTuition" className="font-semibold text-slate-700 cursor-pointer select-none">
+                    Mark these students as enrolled in the Tuition Program
+                  </label>
+                </div>
+
+                <div className="border-t border-slate-200 pt-3">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="logInitialAttendance"
+                      checked={logInitialAttendance}
+                      onChange={(e) => setLogInitialAttendance(e.target.checked)}
+                      className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 cursor-pointer"
+                    />
+                    <label htmlFor="logInitialAttendance" className="font-semibold text-slate-700 cursor-pointer select-none">
+                      Initialize monthly attendance record for these students?
+                    </label>
+                  </div>
+
+                  {logInitialAttendance && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 p-3 bg-white border border-slate-200 rounded-lg animate-in fade-in duration-150">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Month
+                        </label>
+                        <select
+                          value={attendanceMonth}
+                          onChange={(e) => setAttendanceMonth(Number(e.target.value))}
+                          className="w-full border border-slate-200 rounded p-1.5 bg-white cursor-pointer focus:outline-none"
+                        >
+                          <option value={1}>January</option>
+                          <option value={2}>February</option>
+                          <option value={3}>March</option>
+                          <option value={4}>April</option>
+                          <option value={5}>May</option>
+                          <option value={6}>June</option>
+                          <option value={7}>July</option>
+                          <option value={8}>August</option>
+                          <option value={9}>September</option>
+                          <option value={10}>October</option>
+                          <option value={11}>November</option>
+                          <option value={12}>December</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Year
+                        </label>
+                        <input
+                          type="number"
+                          value={attendanceYear}
+                          onChange={(e) => setAttendanceYear(Number(e.target.value))}
+                          className="w-full border border-slate-200 rounded p-1 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Days Present
+                        </label>
+                        <input
+                          type="number"
+                          value={attendanceDaysPresent}
+                          onChange={(e) => setAttendanceDaysPresent(Number(e.target.value))}
+                          className="w-full border border-slate-200 rounded p-1 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                          Total Days
+                        </label>
+                        <input
+                          type="number"
+                          value={attendanceDaysTotal}
+                          onChange={(e) => setAttendanceDaysTotal(Number(e.target.value))}
+                          className="w-full border border-slate-200 rounded p-1 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}

@@ -304,7 +304,7 @@ export default function DashboardContent({
                                     "pudur", "kallur", "mattathukadu", "mattathukkadu"
                                   ];
                                   if (nilgirisVillages.some(v => lowerVillage.includes(v))) {
-                                    resolvedDistrict = "Nilgiris";
+                                    resolvedDistrict = "Coimbatore";
                                   }
                                 }
                               }

@@ -25,7 +25,7 @@ export default function AddStudentButton({
   const [school, setSchool] = useState("");
   const [currentClass, setCurrentClass] = useState("");
   const [village, setVillage] = useState("");
-  const [district, setDistrict] = useState(defaultDistrict || "Nilgiris");
+  const [district, setDistrict] = useState(defaultDistrict || "Coimbatore");
   const [guardianName, setGuardianName] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
   const [state, setState] = useState("Tamil Nadu");
@@ -416,7 +416,7 @@ export default function AddStudentButton({
                       <input
                         type="text"
                         className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg text-sm text-[#24241F] focus:outline-none focus:border-[#4A6741] focus:ring-1 focus:ring-[#4A6741]"
-                        placeholder="e.g. Nilgiris"
+                        placeholder="e.g. Coimbatore"
                         value={district}
                         onChange={(e) => setDistrict(e.target.value)}
                         required
