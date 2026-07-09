@@ -54,8 +54,8 @@ export default function ImportStudentsModal({
     if (!selectedFile) return;
 
     const lowerName = selectedFile.name.toLowerCase();
-    if (!lowerName.endsWith(".csv") && !lowerName.endsWith(".xlsx") && !lowerName.endsWith(".xls")) {
-      setError("Please upload a standard Excel (.xlsx, .xls) or CSV file.");
+    if (!lowerName.endsWith(".csv") && !lowerName.endsWith(".xlsx") && !lowerName.endsWith(".xls") && !lowerName.endsWith(".xslx")) {
+      setError("Please upload a standard Excel (.xlsx, .xls, .xslx) or CSV file.");
       return;
     }
 
